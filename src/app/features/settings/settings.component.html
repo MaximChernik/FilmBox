@@ -354,6 +354,11 @@
     @if (updateMessage()) {
       <p class="hint">{{ updateMessage() }}</p>
     }
+    @if (updateProgress() !== null) {
+      <div class="update-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="updateProgress()">
+        <span [style.width.%]="updateProgress()"></span>
+      </div>
+    }
     <p class="hint">
       Приложение проверяет обновления при запуске и устанавливает их при закрытии (NSIS-сборка).
     </p>

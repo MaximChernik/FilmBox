@@ -19,6 +19,8 @@ export class SettingsComponent {
   readonly sources = signal<SourceInfo[]>([]);
   readonly version = signal('');
   readonly updateMessage = signal('');
+  /** Загрузка обновления: проценты или null (нет загрузки). */
+  readonly updateProgress = signal<number | null>(null);
   private importInput?: HTMLInputElement;
 
   /** Sources displayed in the user-defined parse order. */
@@ -149,6 +151,16 @@ export class SettingsComponent {
         .getVersion()
         .then((v) => this.version.set(v))
         .catch(() => undefined);
+      this.api.onUpdateProgress((pct) => {
+        if (pct >= 0 && pct < 100) {
+          this.updateProgress.set(pct);
+        } else if (pct >= 100) {
+          this.updateProgress.set(100);
+          this.updateMessage.set('Обновление загружено — установится при закрытии FilmBox.');
+        } else {
+          this.updateProgress.set(null);
+        }
+      });
     }
   }
 

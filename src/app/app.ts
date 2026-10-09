@@ -441,6 +441,9 @@ export class App {
       const path = this.router.url.split('?')[0];
       this.settingsActive = path === '/settings';
       if (!this.settingsActive) this.lastNonSettingsUrl = this.router.url;
+      // на странице плеера зарезервированная полоска прокрутки справа
+      // видна даже возле полноэкранной сцены — убираем её
+      document.documentElement.classList.toggle('route-player', path.startsWith('/watch'));
       // PiP-окно живёт только на странице плеера: любой другой маршрут —
       // значит его увело на приложение, а не на сцену — закрываем окно
       if (this.isPip() && !path.startsWith('/watch')) this.api.closePipWindow();

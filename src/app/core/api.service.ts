@@ -114,6 +114,10 @@ export class ApiService {
     return this.api.checkUpdate();
   }
 
+  onUpdateProgress(cb: (pct: number) => void): void {
+    this.api?.onUpdateProgress?.(cb);
+  }
+
   /** Subscribe to the pre-close farewell event (no-op in a plain browser). */
   onFarewell(cb: () => void): void {
     this.api?.onFarewell?.(cb);

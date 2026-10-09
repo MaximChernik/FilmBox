@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 
 /**
  * Автообновление установленной (NSIS) версии через electron-updater.
@@ -48,6 +48,18 @@ export function initAutoUpdater(notify: (text: string) => void): void {
     autoUpdater.on('update-downloaded', () => {
       notify('Обновление готово — установится при закрытии FilmBox.');
     });
+
+    // Прогресс загрузки шлём в рендерер (полоска обновления в настройках);
+    // -1 = отмена/ошибка, 100 = готово к установке
+    const sendProgress = (pct: number): void => {
+      for (const w of BrowserWindow.getAllWindows()) {
+        w.webContents.send('update:progress', pct);
+      }
+    };
+    autoUpdater.on('download-progress', (p) => sendProgress(Math.round(p.percent)));
+    autoUpdater.on('update-cancelled', () => sendProgress(-1));
+    autoUpdater.on('error', () => sendProgress(-1));
+    autoUpdater.on('update-downloaded', () => sendProgress(100));
 
     void autoUpdater.checkForUpdates().catch(() => undefined);
   });

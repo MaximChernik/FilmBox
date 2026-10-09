@@ -88,6 +88,8 @@ export interface ElectronApi {
   onPipWindowClosed?(cb: () => void): void;
   getVersion(): Promise<string>;
   checkUpdate?(): Promise<{ status: string; message: string }>;
+  /** Фоновая загрузка обновления: pct — проценты (100 = готово, -1 = отмена/ошибка). */
+  onUpdateProgress?(cb: (pct: number) => void): void;
   /** Sync read from the durable state file (userData/filmbox-state.json). */
   stateGetSync?(key: string): string | null;
   stateSet?(key: string, value: string): Promise<void>;
