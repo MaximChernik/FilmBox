@@ -1,0 +1,656 @@
+:root {
+  --accent: #e50914;
+  --accent-rgb: 229, 9, 20;
+  --accent-soft: rgba(229, 9, 20, 0.16);
+  --bg: #0b0b0f;
+  --bg-raised: #13131a;
+  --border: rgba(255, 255, 255, 0.09);
+  --text: #ececf4;
+  --text-dim: #a7a7b8;
+  --text-faint: #71718a;
+  --radius: 10px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* no scroll-behavior here: it would force even behavior:'instant' scrolls
+     to animate; smoothness is requested explicitly via scrollTo options */
+  /* reserve the scrollbar track all the time: appearing/disappearing
+     scrollbars change the viewport width and make the header jump */
+  scrollbar-gutter: stable;
+}
+
+body {
+  /* богатый фон: акцентное сияние сверху, два тёплых и один холодный источник
+     в углах — глубина без анимаций (всё статично и дёшево рисуется) */
+  background:
+    radial-gradient(1400px 620px at 50% -12%, rgba(229, 9, 20, 0.11), transparent 65%),
+    radial-gradient(620px 420px at 86% 12%, rgba(72, 72, 150, 0.12), transparent 70%),
+    radial-gradient(900px 700px at 100% 105%, rgba(70, 70, 130, 0.14), transparent 65%),
+    radial-gradient(800px 560px at 0% 100%, rgba(150, 70, 70, 0.1), transparent 60%),
+    linear-gradient(180deg, #111019 0%, #0d0d13 40%, var(--bg) 100%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* window vignette — subtle darkening around the edges of the viewport */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow:
+    inset 0 0 70px 18px rgba(0, 0, 0, 0.5),
+    inset 0 0 180px 40px rgba(0, 0, 0, 0.22);
+}
+
+/* акцентное выделение текста под фирменный красный */
+::selection {
+  background: rgba(229, 9, 20, 0.45);
+  color: #fff;
+}
+
+/* route changes crossfade (withViewTransitions) — a slower, softer dissolve */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* shared-element постера: вылет из сетки каталога и увеличение в герой
+   страницы деталей (имя ставят карточка и герой — см. PosterFlyService) */
+::view-transition-group(poster-fly) {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.25, 0.85, 0.3, 1);
+}
+
+/* картинка внутри группы кроссфейдится чуть мягче и не уходит раньше группы */
+::view-transition-old(poster-fly),
+::view-transition-new(poster-fly) {
+  animation-duration: 0.45s;
+  animation-timing-function: ease;
+}
+
+/* startup splash holds the header entrance animations until it lifts */
+html.splash-active .topbar::before,
+html.splash-active .topbar .logo-mark,
+html.splash-active .topbar .logo-text .ltr {
+  animation-play-state: paused;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* продуктовые мелочи уровня системы: аккуратные плейсхолдеры, поля-числа
+   без нативных «колёс», единый акцентный фокус для клавиатурной навигации */
+::placeholder {
+  color: var(--text-faint);
+  opacity: 1;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(229, 9, 20, 0.85);
+  outline-offset: 2px;
+}
+
+/* Единая стилизация селекторов во всём приложении: тёмная «плашка»,
+   свой шеврон вместо нативного, акцентное кольцо фокуса. Компоненты
+   задают только ширину/сетку. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 34px;
+  padding: 0 30px 0 11px;
+  background-color: var(--bg-raised);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b8ba3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.24);
+    background-color: #191924;
+  }
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+  }
+
+  option {
+    background: #15151d;
+    color: var(--text);
+    padding: 7px 9px;
+
+    &:hover {
+      background: #23232f;
+    }
+
+    &:checked {
+      background: var(--accent);
+      color: #fff;
+    }
+  }
+}
+
+/* Собственный выпадающий список (installStyledSelects): нативный popup на
+   Windows рисует ОС и почти не подчиняется стилям, поэтому список рисуется
+   своим элементом — тёмная карточка с подсветкой и галочкой выбора. */
+.sel-pop {
+  position: fixed;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%), var(--bg-raised);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  line-height: 1.3;
+  animation: sel-pop-in 0.12s ease-out;
+
+  .sel-pop-group {
+    flex: none; /* не сжимается при max-height: список прокручивается, а не сплющивается */
+    padding: 9px 11px 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .sel-pop-item {
+    flex: none; /* ключевое: без этого пункты сплющиваются в строку 16–18px
+       при max-height — список обязан прокручиваться, а не сжиматься */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 11px;
+    border-radius: 7px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+      background-color 0.1s ease,
+      color 0.1s ease;
+
+    &::after {
+      content: '';
+      flex: none;
+      width: 12px;
+      height: 7px;
+      margin-left: auto;
+      border-left: 2px solid var(--accent);
+      border-bottom: 2px solid var(--accent);
+      transform: rotate(-45deg) translateY(-2px);
+      opacity: 0;
+    }
+
+    &:hover,
+    &.is-active {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+    }
+
+    &.is-sel {
+      color: #fff;
+      font-weight: 600;
+
+      &::after {
+        opacity: 1;
+      }
+    }
+
+    &.is-off {
+      opacity: 0.4;
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+        color: var(--text-dim);
+      }
+    }
+  }
+
+  /* тонкий скролл: большой палец — иначе на тёмном фоне непонятно,
+     что под обрезом есть ещё пункты */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.42);
+    background-clip: padding-box;
+  }
+}
+
+@keyframes sel-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #33334a, #24243080);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(229, 9, 20, 0.75), rgba(140, 8, 14, 0.65));
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Shared building blocks */
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 160px), 1fr));
+  gap: 22px 16px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.chip {
+  position: relative;
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.25s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+
+  /* вспышка нажатия: красный bloom из центра */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 50%, rgba(229, 9, 20, 0.4), transparent 70%);
+    opacity: 0;
+    transform: scale(0.35);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+    pointer-events: none;
+  }
+
+  /* наведение — только цвета: кнопка остаётся на месте */
+  &:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  /* нажатие: только короткий bloom, без движения */
+  &:active {
+    transition-duration: 0.07s;
+
+    &::before {
+      opacity: 1;
+      transform: scale(1);
+      transition-duration: 0.07s;
+    }
+  }
+
+  &.active,
+  &.selected {
+    color: #fff;
+    font-weight: 600;
+    border-color: rgba(229, 9, 20, 0.9);
+    background: linear-gradient(
+      120deg,
+      rgba(229, 9, 20, 0.8) 0%,
+      rgba(229, 9, 20, 0.35) 45%,
+      rgba(240, 30, 45, 0.72) 60%,
+      rgba(229, 9, 20, 0.35) 100%
+    );
+    background-size: 220% 220%;
+    box-shadow:
+      0 5px 16px rgba(229, 9, 20, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    /* перелив градиента + пульс свечения (кнопка не двигается) */
+    animation:
+      chip-shimmer 3.4s linear infinite,
+      chip-glow 2.8s ease-in-out infinite;
+
+    /* красная нить под активным чипом */
+    &::after {
+      content: '';
+      position: absolute;
+      left: 20%;
+      right: 20%;
+      bottom: -3px;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        #e50914 30%,
+        #ff3b47 50%,
+        #e50914 70%,
+        transparent
+      );
+      transform: scaleX(0);
+      animation: chip-thread-in 0.4s 0.18s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+    }
+  }
+}
+
+@keyframes chip-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes chip-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 5px 16px rgba(229, 9, 20, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 5px 24px rgba(229, 9, 20, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+}
+
+@keyframes chip-thread-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip.active,
+  .chip.selected {
+    animation: none;
+
+    &::after {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.18s ease,
+    border-color 0.15s ease;
+  text-decoration: none;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  /* нажатие: короткое затемнение вместо движения */
+  &:active:not(:disabled) {
+    filter: brightness(0.92);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  &.primary {
+    background: linear-gradient(135deg, #ff2431 0%, var(--accent) 55%, #ab060f 100%);
+    color: #fff;
+    box-shadow:
+      0 8px 22px rgba(229, 9, 20, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+
+    &:hover:not(:disabled) {
+      box-shadow:
+        0 14px 32px rgba(229, 9, 20, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      filter: brightness(1.06);
+    }
+  }
+
+  &.ghost {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text);
+    border: 1px solid var(--border);
+
+    &:hover:not(:disabled) {
+      border-color: rgba(229, 9, 20, 0.6);
+      color: #fff;
+      background: rgba(229, 9, 20, 0.1);
+      filter: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+  }
+}
+
+.state-block {
+  text-align: center;
+  padding: 52px 20px;
+  color: var(--text-dim);
+
+  /* фирменная иконка-киноплёнка над заголовком пустого/ошибочного состояния */
+  &::before {
+    content: '';
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    opacity: 0.62;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23e50914' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='14' width='48' height='36' rx='6'/%3E%3Cpath d='M20 14v36M44 14v36'/%3E%3Cpath d='M8 24h12M8 40h12M44 24h12M44 40h12'/%3E%3Cpath d='M25 21h14v22H25z'/%3E%3C/svg%3E")
+      no-repeat center / contain;
+    filter: drop-shadow(0 0 14px rgba(229, 9, 20, 0.35));
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    color: var(--text);
+    font-size: 20px;
+    background: linear-gradient(135deg, #ffffff 30%, #c8c8da 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .error-text {
+    color: #ff9b9b;
+    margin-bottom: 18px;
+    word-break: break-word;
+  }
+}
+
+.section-title {
+  position: relative;
+  display: inline-block;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 18px;
+  letter-spacing: 0.005em;
+
+  /* фирменный красный росчерк под заголовком секции */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 64px;
+    height: 3px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), rgba(229, 9, 20, 0));
+    box-shadow: 0 0 12px rgba(229, 9, 20, 0.6);
+  }
+}
+
+/* отдельное PiP-окно — в нём только сцена плеера: без шапки приложения,
+   футера, сплэша, кнопки «наверх» и фоновой виньетки */
+html.pip-window {
+  scrollbar-gutter: auto;
+
+  .topbar,
+  .footer,
+  .splash,
+  .to-top,
+  .env-banner {
+    display: none !important;
+  }
+
+  body {
+    background: #000;
+    overflow: hidden;
+  }
+
+  .page {
+    /* компонентный `.page[_ngcontent]` специфичнее — гасим !important */
+    padding: 0 !important;
+    height: 100dvh;
+  }
+}
+
+/* окно vignette не нужно дублировать в PiP-вкладке */
+html.pip-window body::after {
+  box-shadow: none;
+}
+
+/* Кастомный тултип полного названия (TitleTipDirective): узел живёт в body,
+   поэтому всплывает поверх сетки и не обрезается overflow'ем карточек */
+.title-tip {
+  position: fixed;
+  z-index: 4000;
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 9px 13px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%), rgba(20, 20, 27, 0.97);
+  border: 1px solid rgba(229, 9, 20, 0.42);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.55),
+    0 0 18px rgba(229, 9, 20, 0.16);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+
+  &.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

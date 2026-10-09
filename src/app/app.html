@@ -1,0 +1,307 @@
+@if (splash() !== 'gone') {
+  <div
+    class="splash"
+    [class.closing]="splash() === 'closing'"
+    [class.exiting]="splash() === 'exiting'"
+    aria-hidden="true"
+  >
+    <svg class="logo-mark splash-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="splashGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff5a5f" />
+          <stop offset="1" stop-color="#c40914" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#splashGrad)" />
+      <rect
+        class="splash-outline"
+        x="1.5"
+        y="1.5"
+        width="29"
+        height="29"
+        rx="7.5"
+        pathLength="100"
+        fill="none"
+        stroke="rgba(255,255,255,0.75)"
+        stroke-width="1"
+      />
+      <g fill="#ffffff" opacity="0.92">
+        <rect x="4.5" y="5" width="3" height="3" rx="1" />
+        <rect x="4.5" y="14.5" width="3" height="3" rx="1" />
+        <rect x="4.5" y="24" width="3" height="3" rx="1" />
+        <rect x="24.5" y="5" width="3" height="3" rx="1" />
+        <rect x="24.5" y="14.5" width="3" height="3" rx="1" />
+        <rect x="24.5" y="24" width="3" height="3" rx="1" />
+      </g>
+      <path d="M13.5 10.2 22.5 16l-9 5.8z" fill="#ffffff" />
+    </svg>
+    <span class="logo-text splash-text">
+      @for (ltr of letters; track $index; let i = $index) {
+        <span class="ltr" [class.accent]="i >= 4" [style.--i]="i">{{ ltr }}</span>
+      }
+    </span>
+    <span class="splash-line"></span>
+  </div>
+}
+
+@if (!isPip()) {
+  <header class="topbar">
+    <a routerLink="/" class="logo" aria-label="FilmBox — на главную">
+      <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ff5a5f" />
+            <stop offset="1" stop-color="#c40914" />
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#logoGrad)" />
+        <g fill="#ffffff" opacity="0.92">
+          <rect x="4.5" y="5" width="3" height="3" rx="1" />
+          <rect x="4.5" y="14.5" width="3" height="3" rx="1" />
+          <rect x="4.5" y="24" width="3" height="3" rx="1" />
+          <rect x="24.5" y="5" width="3" height="3" rx="1" />
+          <rect x="24.5" y="14.5" width="3" height="3" rx="1" />
+          <rect x="24.5" y="24" width="3" height="3" rx="1" />
+        </g>
+        <path d="M13.5 10.2 22.5 16l-9 5.8z" fill="#ffffff" />
+      </svg>
+      <span class="logo-text">
+        @for (ltr of letters; track $index; let i = $index) {
+          <span class="ltr" [class.accent]="i >= 4" [style.--i]="i">{{ ltr }}</span>
+        }
+      </span>
+    </a>
+
+    <nav class="nav">
+      @for (cat of categories(); track cat.id) {
+        <a
+          [routerLink]="cat.id === 'home' ? '/' : '/category/' + cat.id"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: cat.id === 'home' }"
+        >
+          <app-nav-icon [name]="cat.id" />
+          {{ cat.title }}
+        </a>
+      }
+      <a routerLink="/recs" routerLinkActive="active">
+        <app-nav-icon name="recs" />
+        Рекомендуем
+      </a>
+      <a routerLink="/favorites" routerLinkActive="active">
+        <app-nav-icon name="favorites" />
+        Избранное
+      </a>
+      <a routerLink="/later" routerLinkActive="active">
+        <app-nav-icon name="later" />
+        Смотреть позже
+      </a>
+    </nav>
+
+    <form class="search" (ngSubmit)="search()" role="search">
+      <input
+        type="search"
+        name="q"
+        [ngModel]="query"
+        (ngModelChange)="onQueryChange($event)"
+        (keydown)="onSugKeydown($event)"
+        (blur)="closeSuggestions()"
+        placeholder="Поиск фильмов и сериалов…"
+        autocomplete="off"
+        aria-label="Поиск"
+        role="combobox"
+        [attr.aria-expanded]="sugOpen()"
+        aria-controls="search-suggestions"
+      />
+      <button type="submit" aria-label="Найти">
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
+          <path
+            d="m20 20-3.6-3.6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
+      @if (sugOpen() && suggestions().length) {
+        <ul id="search-suggestions" class="suggestions" role="listbox">
+          @for (sug of suggestions(); track sug.url; let i = $index) {
+            <li
+              role="option"
+              [class.active]="i === sugIndex()"
+              [attr.aria-selected]="i === sugIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="pickSuggestion(sug)"
+            >
+              @if (sug.poster) {
+                <img class="sug-poster" [src]="sug.poster" alt="" loading="lazy" />
+              } @else {
+                <span class="sug-ph" aria-hidden="true"><app-poster-ph /></span>
+              }
+              <span class="sug-title">{{ sug.title }}</span>
+              @if (sug.year) {
+                <span class="sug-year">{{ sug.year }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </form>
+
+    <div class="actions">
+      <a
+        routerLink="/history"
+        routerLinkActive="active"
+        class="icon-btn"
+        title="История просмотра"
+        aria-label="История просмотра"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3.5 2" />
+        </svg>
+      </a>
+
+      <button
+        type="button"
+        (click)="toggleSettings()"
+        [class.active]="settingsActive"
+        class="icon-btn"
+        [title]="settingsActive ? 'Вернуться назад' : 'Настройки'"
+        aria-label="Настройки"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <div class="win-controls">
+      @if (api.isElectron) {
+        <button
+          type="button"
+          class="win-btn"
+          (click)="minimizeWindow()"
+          title="Свернуть"
+          aria-label="Свернуть"
+        >
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path d="M0.5 6h11" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="win-btn"
+          (click)="toggleMaximizeWindow()"
+          [title]="maximized() ? 'Восстановить' : 'Развернуть'"
+          [attr.aria-label]="maximized() ? 'Восстановить' : 'Развернуть'"
+        >
+          @if (maximized()) {
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+              <rect
+                x="0.5"
+                y="3.5"
+                width="7"
+                height="7"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path d="M3.5 3.5V0.5h8v10h-4" fill="none" stroke="currentColor" stroke-width="1.2" />
+            </svg>
+          } @else {
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+              <rect
+                x="0.5"
+                y="0.5"
+                width="11"
+                height="11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+            </svg>
+          }
+        </button>
+        <button
+          type="button"
+          class="win-btn win-close"
+          (click)="closeWindow()"
+          title="Закрыть"
+          aria-label="Закрыть"
+        >
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path d="M1 1l10 10M11 1 1 11" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+        </button>
+      }
+    </div>
+  </header>
+}
+
+@if (!api.isElectron) {
+  <div class="env-banner">
+    Приложение запущено вне Electron — данные недоступны. Соберите проект (<code>npm run build</code
+    >) и запустите <code>npm start</code>.
+  </div>
+}
+
+<main class="page">
+  <router-outlet />
+</main>
+
+@if (showToTop() && !isPip()) {
+  <button
+    type="button"
+    class="to-top"
+    (click)="scrollTop()"
+    title="Наверх"
+    aria-label="Прокрутить к началу"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  </button>
+}
+
+@if (!isPip()) {
+  <footer class="footer">
+    <span>FilmBox — локальный агрегатор фильмов и сериалов</span>
+    <span class="muted">Контент предоставляется сторонними источниками</span>
+  </footer>
+}

@@ -1,0 +1,426 @@
+.settings {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* ── карточка секции ─────────────────────────────────────── */
+.card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 55%),
+    var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px 16px;
+  margin-bottom: 16px;
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.18s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  /* тонкая красная нить вдоль верхней грани */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      var(--accent) 0%,
+      rgba(229, 9, 20, 0.4) 34%,
+      rgba(229, 9, 20, 0.06) 66%,
+      transparent 100%
+    );
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 8px;
+}
+
+.card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  color: #ff5b64;
+  background: linear-gradient(160deg, rgba(229, 9, 20, 0.24), rgba(229, 9, 20, 0.05));
+  border: 1px solid rgba(229, 9, 20, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  svg {
+    width: 19px;
+    height: 19px;
+  }
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+/* ── строки ──────────────────────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  font-size: 14px;
+  color: var(--text-dim);
+
+  & + .row {
+    border-top: 1px solid var(--border);
+  }
+
+  .name {
+    color: var(--text);
+  }
+
+  code {
+    font-size: 12px;
+    color: var(--text-faint);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  &.local {
+    justify-content: flex-start;
+  }
+
+  .local-path {
+    flex: 1;
+    min-width: 220px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg-raised);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition:
+      border-color 0.12s ease,
+      box-shadow 0.12s ease;
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+    }
+  }
+
+  .btn.small {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  &.actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+.actions .btn {
+  padding: 9px 16px;
+  font-size: 14px;
+}
+
+/* ── единый переключатель (вместо нативных чекбоксов) ─────── */
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.18s ease;
+
+  .knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    transition:
+      transform 0.22s cubic-bezier(0.34, 1.15, 0.64, 1),
+      width 0.1s ease;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* «впивание» бегунка при нажатии */
+  &:active .knob {
+    width: 19px;
+  }
+
+  &.on {
+    background: linear-gradient(135deg, #ff2431, var(--accent));
+
+    .knob {
+      transform: translateX(16px);
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, #ff3b47, #e11d2e);
+    }
+
+    &:active .knob {
+      transform: translateX(13px);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* ── список источников ───────────────────────────────────── */
+.src-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row.source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+
+  & + & {
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.dragging {
+    opacity: 0.3;
+    filter: grayscale(0.6);
+  }
+
+  /* insertion point: an accent line on top of the hovered row */
+  &.drag-over {
+    background: rgba(120, 145, 255, 0.08);
+    box-shadow: inset 0 2px 0 0 var(--accent);
+    border-radius: 6px;
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  code {
+    flex-shrink: 0;
+  }
+
+  /* переключатель всегда справа, текст выровнен по левому краю */
+  .switch {
+    margin-left: auto;
+  }
+}
+
+.grip {
+  cursor: grab;
+  color: var(--text-faint);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 4px;
+  user-select: none;
+
+  &:hover {
+    color: var(--text-dim);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// styled clone of the row that follows the cursor while dragging
+// (appended to <body> — it keeps the component's scoping attribute)
+.row.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  margin: 0;
+  padding: 10px 16px;
+  gap: 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  opacity: 1;
+  filter: none;
+  pointer-events: none;
+  color: var(--text);
+}
+
+/* ── segmented control (размер карточек) ─────────────────── */
+.seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+
+  .chip {
+    cursor: pointer;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 6px 14px;
+    font-size: 13px;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      box-shadow 0.15s ease;
+
+    &:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &.active {
+      background: var(--bg-raised);
+      color: #fff;
+      font-weight: 600;
+      box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+  }
+}
+
+/* ── разделы библиотеки: строки «раздел — кнопка» ────────── */
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015) 60%),
+    rgba(255, 255, 255, 0.03);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  /* строка не двигается — только мягкая подсветка рамки */
+  &:hover {
+    border-color: rgba(229, 9, 20, 0.4);
+  }
+}
+
+.lib-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  color: #ff5b64;
+  background: linear-gradient(160deg, rgba(229, 9, 20, 0.24), rgba(229, 9, 20, 0.05));
+  border: 1px solid rgba(229, 9, 20, 0.3);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.lib-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+  flex-shrink: 0;
+}
+
+.lib-count {
+  color: var(--text);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  .lib-row:hover & {
+    background: rgba(229, 9, 20, 0.4);
+    color: #fff;
+  }
+}
+
+/* кнопки прижаты вправо: слева раздел — справа кнопка */
+.lib-btns {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 9px;
+  }
+
+  /* «Открыть» — акцентная кнопка раздела */
+  .open {
+    color: #ff8a90;
+    border-color: rgba(229, 9, 20, 0.5);
+  }
+}
+
+/* строка «раздел — кнопка»: компактные кнопки действий */

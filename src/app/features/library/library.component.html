@@ -1,0 +1,87 @@
+<section class="library">
+  <div class="head">
+    <h1 class="section-title">{{ title() }}</h1>
+    <div class="tabs">
+      <a class="chip" routerLink="/favorites" [class.active]="tab() === 'favorites'">
+        Избранное ({{ favorites().length }})
+      </a>
+      <a class="chip" routerLink="/later" [class.active]="tab() === 'later'">
+        Смотреть позже ({{ later().length }})
+      </a>
+      <a class="chip" routerLink="/history" [class.active]="tab() === 'history'">
+        История ({{ historyItems().length }})
+      </a>
+      @if (list().length) {
+        <button class="chip danger" (click)="clearCurrent()">Очистить</button>
+      }
+    </div>
+  </div>
+
+  @if (tab() === 'history') {
+    <div class="chips">
+      <button
+        class="chip"
+        [class.active]="historyFilter() === 'all'"
+        (click)="setHistoryFilter('all')"
+      >
+        Все
+      </button>
+      <button
+        class="chip"
+        [class.active]="historyFilter() === 'progress'"
+        (click)="setHistoryFilter('progress')"
+      >
+        В процессе
+      </button>
+      <button
+        class="chip"
+        [class.active]="historyFilter() === 'fresh'"
+        (click)="setHistoryFilter('fresh')"
+      >
+        Не просмотрены
+      </button>
+      <button
+        class="chip"
+        [class.active]="historyFilter() === 'done'"
+        (click)="setHistoryFilter('done')"
+      >
+        Досмотрены
+      </button>
+    </div>
+  }
+
+  @if (isEmpty()) {
+    <div class="state-block">
+      @switch (tab()) {
+        @case ('favorites') {
+          <h2>В избранном пока ничего нет</h2>
+          <p>
+            Отмечайте понравившиеся фильмы и сериалы кнопкой «В избранное», чтобы быстро находить их
+            здесь.
+          </p>
+          <a class="btn primary" routerLink="/">Перейти в каталог</a>
+        }
+        @case ('later') {
+          <h2>Список «Смотреть позже» пуст</h2>
+          <p>Добавляйте сюда интересные тайтлы, чтобы не потерять их — они ждут вас здесь.</p>
+          <a class="btn primary" routerLink="/">Перейти в каталог</a>
+        }
+        @default {
+          <h2>История просмотра пуста</h2>
+          <p>Здесь появятся фильмы и серии, которые вы открывали в плеере.</p>
+          <a class="btn primary" routerLink="/">Перейти в каталог</a>
+        }
+      }
+    </div>
+  } @else {
+    <div class="page-grid" (keydown)="onGridKeydown($event)">
+      @for (item of list(); track item.url) {
+        <app-media-card
+          [item]="item"
+          [removable]="tab() === 'history'"
+          (remove)="removeItem(item)"
+        />
+      }
+    </div>
+  }
+</section>

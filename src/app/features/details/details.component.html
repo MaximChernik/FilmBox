@@ -1,0 +1,270 @@
+<section class="details">
+  <a class="back" href="#/" (click)="goBack($event)">← Назад</a>
+
+  @if (error() && !loading()) {
+    <div class="state-block">
+      <h2>Не удалось открыть материал</h2>
+      <p class="error-text">{{ error() }}</p>
+      <a class="btn ghost" routerLink="/">Вернуться в каталог</a>
+    </div>
+  }
+
+  @if (!error()) {
+    <div class="hero" [class.hero-loading]="!details()" [attr.aria-busy]="!details()">
+      @if (posterSrc(); as p) {
+        <div
+          class="hero-glow"
+          aria-hidden="true"
+          [style.backgroundImage]="'url(&quot;' + p + '&quot;)'"
+        ></div>
+      }
+      <div class="poster" [class.flying]="posterFlying()">
+        @if (posterSrc(); as p) {
+          <img [src]="p" [alt]="details()?.title ?? ''" (error)="onPosterError()" />
+        } @else {
+          <app-poster-ph [title]="details()?.title ?? ''" />
+        }
+      </div>
+
+      <div class="info">
+        @if (details(); as d) {
+          <div class="badges">
+            @if (d.kind) {
+              <span class="badge">{{
+                d.kind === 'serial'
+                  ? 'Сериал'
+                  : d.kind === 'cartoon'
+                    ? 'Мультфильм'
+                    : d.kind === 'anime'
+                      ? 'Аниме'
+                      : 'Фильм'
+              }}</span>
+            }
+            @if (d.quality) {
+              <span class="badge dim">{{ d.quality }}</span>
+            }
+            @if (d.ratingKp != null) {
+              <span class="badge rating">КП {{ d.ratingKp }}</span>
+            }
+            @if (d.ratingImdb != null) {
+              <span class="badge rating">IMDb {{ d.ratingImdb }}</span>
+            }
+            @if (d.rating) {
+              <span class="badge rating"
+                >★ {{ d.rating }}
+                @if (d.votes) {
+                  <span class="votes">({{ d.votes }})</span>
+                }
+              </span>
+            }
+          </div>
+
+          <h1>{{ d.title }}</h1>
+          @if (d.originalTitle && d.originalTitle !== d.title) {
+            <div class="original">{{ d.originalTitle }}</div>
+          }
+
+          <ul class="facts">
+            @if (d.year) {
+              <li>
+                <span>Год</span><b>{{ d.year }}</b>
+              </li>
+            }
+            @if (d.country) {
+              <li>
+                <span>Страна</span><b>{{ d.country }}</b>
+              </li>
+            }
+            @if (d.genres?.length) {
+              <li>
+                <span>Жанры</span><b>{{ d.genres!.join(', ') }}</b>
+              </li>
+            }
+            @if (d.director) {
+              <li>
+                <span>Режиссёр</span><b>{{ d.director }}</b>
+              </li>
+            }
+            @if (d.cast) {
+              <li>
+                <span>В ролях</span><b>{{ d.cast }}</b>
+              </li>
+            }
+            @if (d.seasonsCount) {
+              <li>
+                <span>Сезонов</span><b>{{ d.seasonsCount }}</b>
+              </li>
+            }
+            @if (d.lastEpisode) {
+              <li>
+                <span>Последняя серия</span><b>{{ d.lastEpisode }}</b>
+              </li>
+            }
+          </ul>
+
+          @if (sourceTabs().length) {
+            <div class="players source-tabs">
+              <span class="players-label">Источники:</span>
+              @for (tab of allTabs(); track tab.sourceId) {
+                <button
+                  class="chip"
+                  [title]="tabTitle(tab)"
+                  [attr.data-source]="tab.sourceId"
+                  [class.selected]="activeTab()?.sourceId === tab.sourceId"
+                  [class.best]="trustedSourceId() === tab.sourceId"
+                  (click)="selectSource(tab.sourceId)"
+                >
+                  @if (trustedSourceId() === tab.sourceId) {
+                    <span class="best-star" aria-hidden="true">★</span>
+                  }
+                  {{ tab.sourceName }}
+                </button>
+              }
+            </div>
+          }
+
+          <div class="actions">
+            <button class="btn primary" [disabled]="activeTabLoading()" (click)="watch()">
+              {{ progress() ? '▶ Продолжить просмотр' : '▶ Смотреть' }}
+            </button>
+            @if (progressLabel(); as p) {
+              <span class="resume-note">Вы смотрели ранее: {{ p }}</span>
+            }
+            <button class="btn ghost" (click)="toggleFavorite()">
+              {{ isFavorite() ? '★ В избранном' : '☆ В избранное' }}
+            </button>
+            <button class="btn ghost" (click)="toggleLater()">
+              {{ isLater() ? '✓ Смотреть позже' : '＋ Смотреть позже' }}
+            </button>
+            <button
+              class="btn ghost"
+              [disabled]="trailerPhase() === 'loading'"
+              (click)="openTrailer()"
+            >
+              ▷ Трейлер
+            </button>
+            <button class="btn ghost" (click)="openOnSite()">Открыть на сайте</button>
+          </div>
+
+          <div class="my-meta">
+            <div class="my-meta-row">
+              <span class="my-meta-label">Моя оценка</span>
+              <div class="rating-scale" role="radiogroup" aria-label="Моя оценка">
+                @for (n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track n) {
+                  <button
+                    type="button"
+                    class="rating-num"
+                    role="radio"
+                    [attr.aria-checked]="myRating() === n"
+                    [class.filled]="n < (myRating() ?? 0)"
+                    [class.on]="myRating() === n"
+                    [title]="'Оценить на ' + n"
+                    (click)="setMyRating(n)"
+                  >
+                    {{ n }}
+                  </button>
+                }
+              </div>
+              @if (myRating()) {
+                <span class="my-rating-value">{{ myRating() }}/10</span>
+              }
+            </div>
+            <div class="my-meta-row">
+              <span class="my-meta-label">Статус</span>
+              @for (s of statusOptions; track s.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.selected]="myStatus() === s.id"
+                  (click)="setMyStatus(myStatus() === s.id ? null : s.id)"
+                >
+                  {{ s.title }}
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (activePlayers().length > 1) {
+            <div class="players">
+              <span class="players-label">Плееры:</span>
+              @for (p of activePlayers(); track p.url) {
+                <button
+                  class="chip"
+                  [class.selected]="progress()?.tab === p.url"
+                  (click)="watch(p)"
+                >
+                  {{ p.label }}
+                </button>
+              }
+            </div>
+          } @else if (activeTabLoading()) {
+            <div class="players">
+              <span class="players-label">Плееры:</span>
+              <span class="chip loading">Загрузка плееров…</span>
+            </div>
+          } @else if (!activePlayers().length) {
+            <div class="players">
+              <span class="players-label">Плееры:</span>
+              <span class="chip muted">Нет плееров</span>
+            </div>
+          }
+        } @else {
+          <app-spinner />
+        }
+      </div>
+    </div>
+
+    @if (details(); as d) {
+      @if (d.description) {
+        <div class="description">
+          <h2>Описание</h2>
+          <p>{{ d.description }}</p>
+        </div>
+      }
+      @if (similar().length) {
+        <div class="similar">
+          <h2>Похожие материалы</h2>
+          <div class="page-grid">
+            @for (item of similar(); track item.url) {
+              <app-media-card [item]="item" />
+            }
+          </div>
+        </div>
+      }
+    }
+
+    @if (trailerVisible()) {
+      <div class="trailer-backdrop" (click)="closeTrailer()">
+        <div
+          class="trailer-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Трейлер"
+          (click)="$event.stopPropagation()"
+          (document:keydown.escape)="closeTrailer()"
+        >
+          <div class="trailer-head">
+            <span class="trailer-title">Трейлер — {{ details()?.title }}</span>
+            <button class="trailer-close" aria-label="Закрыть" (click)="closeTrailer()">
+              ✕
+            </button>
+          </div>
+          <div class="trailer-body">
+            @if (trailerPhase() === 'loading') {
+              <app-spinner />
+            } @else if (trailerPhase() === 'error') {
+              <p class="trailer-error">{{ trailerError() ?? 'Трейлер не найден' }}</p>
+            } @else if (trailerUrl(); as u) {
+              <iframe
+                [src]="u"
+                title="Трейлер"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</section>

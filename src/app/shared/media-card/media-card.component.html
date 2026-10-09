@@ -1,0 +1,126 @@
+<article
+  class="card"
+  [class.flying]="flying()"
+  (click)="open()"
+  (keydown.enter)="open()"
+  tabindex="0"
+  role="link"
+  [attr.aria-label]="item().title"
+>
+  <div class="poster" [class.img-ready]="imgReady()">
+    @if (item().poster && !posterBroken()) {
+      <img
+        [src]="item().poster"
+        [alt]="item().title"
+        loading="lazy"
+        decoding="async"
+        (error)="onPosterError()"
+        (load)="posterLoaded.set(true)"
+      />
+    } @else {
+      <app-poster-ph [title]="item().title" />
+    }
+    @if (item().quality) {
+      <span class="quality">{{ badgeQuality() }}</span>
+    }
+    @if (seasonsMeta()) {
+      <span class="seasons-badge">{{ seasonsMeta() }}</span>
+    }
+    @if (item().ratingKp != null || item().ratingImdb != null || myRating() != null) {
+      <div class="ratings">
+        @if (item().ratingKp != null) {
+          <span class="rating kp">КП {{ item().ratingKp }}</span>
+        }
+        @if (item().ratingImdb != null) {
+          <span class="rating imdb">IMDb {{ item().ratingImdb }}</span>
+        }
+        @if (item().ratingKp == null && item().ratingImdb == null && item().rating) {
+          <span class="rating">★ {{ item().rating }}</span>
+        }
+        @if (myRating(); as mine) {
+          <span class="rating mine">Моя {{ mine }}</span>
+        }
+      </div>
+    } @else if (item().rating) {
+      <span class="rating">★ {{ item().rating }}</span>
+    }
+    @if (item().ribbon) {
+      <span class="ribbon">{{ item().ribbon }}</span>
+    }
+    @if (hasResume()) {
+      @if (watched() > 0) {
+        <div class="watched" role="img" [attr.aria-label]="'Просмотрено на ' + watched() + '%'">
+          <span [style.width.%]="watched()"></span>
+        </div>
+      }
+      @if (watchedText(); as wt) {
+        <span class="watched-time">{{ wt }}</span>
+      }
+    }
+    @if (progress()) {
+      <div class="progress-actions">
+        <button
+          type="button"
+          class="q-btn"
+          title="Отметить просмотренным"
+          (click)="markWatched($event)"
+        >
+          ✓
+        </button>
+        <button
+          type="button"
+          class="q-btn"
+          title="Сбросить прогресс"
+          (click)="resetProgress($event)"
+        >
+          ↺
+        </button>
+      </div>
+    }
+    <div class="hover">
+      <span class="play">▶</span>
+      <div class="quick">
+        <button
+          type="button"
+          class="q-btn"
+          [class.on]="isFavorite()"
+          title="В избранное"
+          [attr.aria-label]="'В избранное'"
+          (click)="toggleFavorite($event)"
+        >
+          {{ isFavorite() ? '★' : '☆' }}
+        </button>
+        <button
+          type="button"
+          class="q-btn"
+          [class.on]="isLater()"
+          title="Смотреть позже"
+          [attr.aria-label]="'Смотреть позже'"
+          (click)="toggleLater($event)"
+        >
+          ⏱
+        </button>
+        @if (removable()) {
+          <button
+            type="button"
+            class="q-btn danger"
+            title="Удалить из истории"
+            aria-label="Удалить из истории"
+            (click)="removeItem($event)"
+          >
+            ✕
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+  <h3 class="title" appTitleTip [appTitleTip]="item().title">{{ item().title }}</h3>
+  <div class="meta">
+    @if (item().year) {
+      <span>{{ item().year }}</span>
+    }
+    @if (item().genres && item().genres!.length) {
+      <span class="genres">{{ item().genres![0] }}</span>
+    }
+  </div>
+</article>

@@ -1,0 +1,127 @@
+/* Остров контролов: карточка с акцентной кромкой, шапки-подписи с иконками
+   и единым размером всех селекторов (ширина колонки одинакова у всех). */
+.controls-island {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px 16px 15px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)), var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: opacity 0.2s ease;
+
+  /* акцентная кромка сверху — тянет взгляд к настройкам */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(229, 9, 20, 0) 55%);
+    opacity: 0.75;
+  }
+
+  &:empty {
+    display: none;
+  }
+}
+
+.ctl {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 0 176px; /* единый размер всех контролов */
+  min-width: 0;
+
+  select {
+    width: 100%;
+  }
+
+  /* фокус селектора подсвечивает и шапку — видно, что открыт dropdown */
+  &:focus-within .ctl-head {
+    color: var(--text-dim);
+
+    .ctl-icon {
+      color: var(--accent);
+    }
+  }
+}
+
+.ctl-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  transition:
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.ctl-icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: color 0.12s ease;
+}
+
+/* кнопка эквалайзера — колонка того же размера, что и селекторы:
+   head с подписью сверху, состояние кнопки снизу (ровно, без «хвоста» справа) */
+.eq-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 34px;
+  padding: 0 13px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease,
+    color 0.12s ease;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.26);
+    background-color: #191924;
+  }
+
+  /* включён — акцентная заливка; панель открыта — акцентная кромка */
+  &.active {
+    color: #fff;
+    border-color: rgba(var(--accent-rgb), 0.75);
+    background-color: rgba(var(--accent-rgb), 0.14);
+  }
+
+  &.open {
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+    border-color: var(--accent);
+  }
+}

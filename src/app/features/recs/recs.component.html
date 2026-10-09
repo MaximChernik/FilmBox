@@ -1,0 +1,62 @@
+<section class="recs">
+  <div class="head">
+    <div>
+      <h1 class="section-title">Рекомендуем</h1>
+      <p class="sub">
+        {{
+          reason() ||
+            'Личная подборка по вашей библиотеке — вес: «Смотреть позже» › избранное › история просмотра'
+        }}
+      </p>
+    </div>
+    <div class="meta">
+      <span class="pill">Позже: {{ stats().later }}</span>
+      <span class="pill">Избранное: {{ stats().favorites }}</span>
+      <span class="pill">Просмотрено: {{ stats().history }}</span>
+      @if (items().length || built()) {
+        <button class="chip" (click)="build()" [disabled]="loading()">
+          {{ loading() ? 'Собираем…' : 'Обновить' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading() && !items().length) {
+    <app-spinner />
+  } @else if (error() && !loading()) {
+    <div class="state-block">
+      <h2>Не удалось собрать подборку</h2>
+      <p class="error-text">{{ error() }}</p>
+      <button class="btn primary" (click)="build()">Повторить</button>
+    </div>
+  } @else if (!hasLibrary()) {
+    <div class="state-block">
+      <h2>Подборка пока пуста</h2>
+      <p>
+        Добавляйте фильмы в «Избранное» и «Смотреть позже», смотрите их — и здесь появятся
+        персональные рекомендации.
+      </p>
+      <a class="btn primary" routerLink="/">Перейти в каталог</a>
+    </div>
+  } @else if (built() && !items().length && !loading()) {
+    <div class="state-block">
+      <h2>Ничего не найдено</h2>
+      <p>Источники не вернули похожих тайтлов. Попробуйте обновить подборку.</p>
+      <button class="btn primary" (click)="build()">Обновить</button>
+    </div>
+  } @else if (items().length) {
+    <div class="page-grid">
+      @for (item of items(); track item.url) {
+        <app-media-card [item]="item" />
+      }
+    </div>
+
+    @if (hasMore()) {
+      <div class="load-more">
+        <button class="btn ghost" (click)="loadMore()" [disabled]="loadingMore() || loading()">
+          {{ loadingMore() ? 'Загрузка…' : 'Загрузить ещё' }}
+        </button>
+      </div>
+    }
+  }
+</section>

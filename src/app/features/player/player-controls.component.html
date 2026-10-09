@@ -1,0 +1,139 @@
+<div class="controls-island">
+  @if (qualityLevels().length) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths('Качество'); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        Качество
+      </span>
+      <select [value]="activeQuality()" (change)="onQualityChange($event)">
+        <option value="-1">Авто</option>
+        @for (level of qualityLevels(); track level.index) {
+          <option [value]="level.index">{{ level.label }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (audioTracks().length) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths('Озвучка'); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        Озвучка
+      </span>
+      <select [value]="activeAudioTrack()" (change)="onAudioTrackChange($event)">
+        @for (track of audioTracks(); track track.index) {
+          <option [value]="track.index">{{ track.label }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (subtitles().length) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths('Субтитры'); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        Субтитры
+      </span>
+      <select [value]="activeSubtitle()" (change)="onSubtitleChange($event)">
+        <option value="-1">Выключены</option>
+        @for (sub of subtitles(); track sub.index) {
+          <option [value]="sub.index">{{ sub.label }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @for (group of embedGroups(); track group.name) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths(group.name); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        {{ group.name }}
+      </span>
+      <select [value]="activeEmbedItem(group)" (change)="onEmbedPick(group, $event)">
+        @if (activeEmbedItem(group) === '') {
+          <option value="">—</option>
+        }
+        @for (item of group.items; track item.label) {
+          <option [value]="item.label">{{ item.label }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (seasons().length > 1) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths('Сезон'); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        Сезон
+      </span>
+      <select [value]="activeSeason()" (change)="onSeasonChange($event)">
+        @for (season of seasons(); track season) {
+          <option [value]="season">{{ season }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (episodes().length > 1) {
+    <label class="ctl">
+      <span class="ctl-head">
+        <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+          @for (d of iconPaths('Серия'); track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        Серия
+      </span>
+      <select [value]="activeEpisode()" (change)="onEpisodeChange($event)">
+        @for (ep of episodes(); track ep.episode) {
+          <option [value]="ep.episode">{{ ep.label }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  <div class="ctl eq-ctl">
+    <span class="ctl-head">
+      <svg class="ctl-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 4v16" />
+        <path d="M12 4v16" />
+        <path d="M17 4v16" />
+        <path d="M4.5 9h5" />
+        <path d="M9.5 15h5" />
+        <path d="M14.5 7h5" />
+      </svg>
+      Эквалайзер
+    </span>
+    <button
+      type="button"
+      class="eq-chip"
+      [class.active]="eqEnabled()"
+      [class.open]="eqOpen()"
+      (click)="toggleEq.emit()"
+      title="Эквалайзер"
+      [attr.aria-pressed]="eqEnabled()"
+    >
+      {{ eqEnabled() ? (eqOpen() ? 'Открыт' : 'Вкл') : 'Выкл' }}
+    </button>
+  </div>
+</div>

@@ -1,0 +1,86 @@
+{
+  "name": "film-agg",
+  "productName": "FilmBox",
+  "version": "0.1.0",
+  "description": "Локальный агрегатор фильмов и сериалов",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "npm run build && electron .",
+    "build": "npm run build:app && npm run build:electron",
+    "build:app": "ng build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "dev:web": "ng serve",
+    "dev:electron": "npm run build:electron && electron . --serve",
+    "watch": "ng build --watch --configuration development",
+    "icon": "node scripts/make-icon.js",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "cheerio": "^1.1.2",
+    "electron-updater": "^6.8.9",
+    "hls.js": "^1.6.7",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.24",
+    "@angular/cli": "^21.2.24",
+    "@angular/compiler-cli": "^21.2.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^22.18.0",
+    "electron": "^37.2.0",
+    "electron-builder": "^26.15.3",
+    "png-to-ico": "^3.0.2",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  },
+  "packageManager": "npm@10.9.4",
+  "build": {
+    "appId": "ru.filmbox.app",
+    "productName": "FilmBox",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "YOUR_GITHUB_OWNER",
+        "repo": "YOUR_GITHUB_REPO",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "FilmBox",
+      "artifactName": "FilmBox-Setup-${version}.exe",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "FilmBox-Portable-${version}.exe"
+    },
+    "electronDist": "node_modules/electron/dist"
+  }
+}

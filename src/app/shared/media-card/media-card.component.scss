@@ -1,0 +1,368 @@
+:host {
+  display: block;
+  /* flex/grid-элемент по умолчанию не сжимается ниже содержимого: длинный
+     nowrap-заголовок распирал карточку шире flex-basis (в полке «Продолжить»
+     разного размера). Явный ноль снимает этот пол — заголовок режется эллипсом. */
+  min-width: 0;
+  /* мягкое появление карточки: сетка и подгрузка «въезжают», а не выщёлкиваются */
+  animation: card-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.card {
+  cursor: pointer;
+  outline: none;
+
+  &:focus-visible .poster {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+
+  /* внутренний контент «оживает» внутри неподвижной рамки постера */
+  &:hover img {
+    transform: scale(1.08);
+  }
+
+  &:hover .play {
+    transform: scale(1.08);
+  }
+
+  /* shared-element: пока постер «летит» в страницу деталей, он носит
+     уникальное view-transition-name (см. PosterFlyService) */
+  &.flying .poster {
+    view-transition-name: poster-fly;
+  }
+}
+
+.poster {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #1b1b23, #12121a);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition:
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
+
+  /* живой скелет под постером, пока картинка грузится; под изображением
+     и плейсхолдером слой не виден и выключается по img-ready */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, #17171f 34%, #212130 48%, #17171f 62%);
+    background-size: 220% 100%;
+    animation: poster-shimmer 1.3s ease-in-out infinite;
+  }
+
+  &.img-ready::before {
+    animation: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  /* рамка остаётся на месте: при наведении только подсвечиваются края,
+     а «оживает» картинка внутри (см. .card:hover img) */
+  .card:hover & {
+    border-color: rgba(229, 9, 20, 0.55);
+    box-shadow:
+      0 22px 44px rgba(0, 0, 0, 0.62),
+      0 0 0 1px rgba(229, 9, 20, 0.4),
+      0 10px 34px rgba(229, 9, 20, 0.22);
+  }
+}
+
+@keyframes poster-shimmer {
+  0% {
+    background-position: 170% 0;
+  }
+  100% {
+    background-position: -70% 0;
+  }
+}
+
+.quality {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(8, 8, 12, 0.86);
+  color: #d6d6f0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.seasons-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(14, 16, 34, 0.92);
+  color: #a8c1ff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 170, 255, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.rating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #ff2230, #c4050f);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.45);
+}
+
+// separate КП/ИМDb badges stacked at the top-right corner
+.ratings {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+
+  .rating {
+    position: static;
+  }
+
+  .rating.imdb {
+    background: rgba(14, 14, 20, 0.9);
+    color: #ffd899;
+    border: 1px solid rgba(255, 216, 153, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  /* собственная оценка — золотом, чтобы не спутать с КП/IMDb */
+  .rating.mine {
+    background: linear-gradient(135deg, #ffd899, #f0a500);
+    color: #2a1c00;
+    border: 1px solid rgba(255, 216, 153, 0.7);
+    box-shadow: 0 4px 12px rgba(240, 165, 0, 0.35);
+  }
+}
+
+.ribbon {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(12, 24, 14, 0.92);
+  color: #9dff9d;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(157, 255, 157, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.watched {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.55);
+
+  span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #ff2230, var(--accent));
+    box-shadow: 0 0 8px rgba(229, 9, 20, 0.8);
+  }
+}
+
+.watched-time {
+  position: absolute;
+  right: 6px;
+  bottom: 8px;
+  z-index: 2;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.progress-actions {
+  position: absolute;
+  left: 6px;
+  bottom: 8px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  .card:hover & {
+    opacity: 1;
+  }
+
+  .q-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  // touch devices have no hover — keep actions reachable
+  @media (hover: none) {
+    opacity: 1;
+  }
+}
+
+.hover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  /* градиентное затемнение вместо плоской заливки — постер читается сквозь */
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.32) 55%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  .card:hover & {
+    opacity: 1;
+  }
+
+  .play {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff2431, var(--accent));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    padding-left: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 8px 22px rgba(0, 0, 0, 0.6),
+      0 0 0 6px rgba(229, 9, 20, 0.18),
+      0 0 26px rgba(229, 9, 20, 0.5);
+    transition: transform 0.18s ease;
+  }
+}
+
+.quick {
+  display: flex;
+  gap: 8px;
+}
+
+.q-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(10, 10, 14, 0.85);
+  color: #d9d9ea;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(229, 9, 20, 0.8);
+    background: rgba(50, 8, 12, 0.92);
+  }
+
+  &.on {
+    color: #ffd899;
+    border-color: rgba(255, 216, 153, 0.7);
+    background: rgba(40, 30, 10, 0.9);
+  }
+
+  &.danger:hover {
+    color: #fff;
+    border-color: rgba(229, 9, 20, 0.85);
+    background: rgba(80, 10, 15, 0.9);
+  }
+}
+
+.title {
+  margin: 10px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    color 0.15s ease,
+    text-shadow 0.15s ease;
+
+  .card:hover & {
+    color: #fff;
+    text-shadow: 0 0 14px rgba(229, 9, 20, 0.35);
+  }
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+
+  .genres {
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* «2026 · боевик» — разделитель вместо голого промежутка
+       (не рисуется, если год отсутствует и жанр стоит первым) */
+    &::before {
+      content: '·';
+      margin-right: 8px;
+      color: var(--text-faint);
+    }
+
+    &:first-child::before {
+      content: none;
+    }
+  }
+}

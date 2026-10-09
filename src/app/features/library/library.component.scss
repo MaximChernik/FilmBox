@@ -1,0 +1,32 @@
+.library {
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+
+  .section-title {
+    margin-bottom: 0;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .chip {
+    border: 1px solid var(--border);
+    cursor: pointer;
+
+    &.danger {
+      color: #ff9b9b;
+      border-color: rgba(255, 120, 120, 0.4);
+    }
+  }
+}

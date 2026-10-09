@@ -1,0 +1,164 @@
+<section class="catalog">
+  @if (!isSearch && categories().length) {
+    <div class="chips">
+      @for (cat of categories(); track cat.id) {
+        <a
+          class="chip"
+          [class.active]="cat.id === categoryId()"
+          [routerLink]="cat.id === 'home' ? '/' : '/category/' + cat.id"
+        >
+          {{ cat.title }}
+        </a>
+      }
+    </div>
+  }
+
+  <div class="title-row">
+    <h1 class="section-title">{{ title() }}</h1>
+    <button
+      class="btn ghost random"
+      (click)="randomFilmRoll()"
+      [disabled]="loading() && !items().length"
+      title="Случайный фильм"
+      aria-label="Случайный фильм"
+    >
+      <!-- объёмный кубик: 6 граней, при клике крутится в объёме -->
+      <span class="dice" aria-hidden="true" [style.transform]="diceTransform()">
+        @for (face of diceFaces; track face.cls) {
+          <span [class]="'face ' + face.cls">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              @for (pt of face.pips; track $index) {
+                <circle [attr.cx]="pt[0]" [attr.cy]="pt[1]" r="1.9" />
+              }
+            </svg>
+          </span>
+        }
+      </span>
+    </button>
+  </div>
+
+  @if (continueItems().length) {
+    <h2 class="rail-title">Продолжить просмотр</h2>
+    <div class="continue-rail">
+      @for (item of continueItems(); track item.url) {
+        <app-media-card class="continue-item" [item]="item" />
+      }
+    </div>
+  }
+
+  <div class="filters" #filtersPanel [class.active]="hasFilters()" [class.stuck]="filtersStuck()">
+    <select [value]="filterKind()" (change)="onFilterKind($event)" aria-label="Тип">
+      <option value="">Все типы</option>
+      @for (kind of kindOptions; track kind.id) {
+        <option [value]="kind.id">{{ kind.title }}</option>
+      }
+    </select>
+
+    <select [value]="filterGenre()" (change)="onFilterGenre($event)" aria-label="Жанр">
+      <option value="">Все жанры</option>
+      @for (genre of genreOptions(); track genre) {
+        <option [value]="genre">{{ genre }}</option>
+      }
+    </select>
+
+    <input
+      type="number"
+      class="year"
+      min="1900"
+      max="2100"
+      placeholder="Год от"
+      [value]="filterYearFrom()"
+      (input)="onFilterYearFrom($event)"
+      aria-label="Год от"
+    />
+    <input
+      type="number"
+      class="year"
+      min="1900"
+      max="2100"
+      placeholder="Год до"
+      [value]="filterYearTo()"
+      (input)="onFilterYearTo($event)"
+      aria-label="Год до"
+    />
+
+    <select [value]="filterRating()" (change)="onFilterRating($event)" aria-label="Рейтинг">
+      <option value="">Любой рейтинг</option>
+      @for (rating of ratingOptions; track rating) {
+        <option [value]="rating">{{ rating }}+</option>
+      }
+    </select>
+
+    <select [value]="filterQuality()" (change)="onFilterQuality($event)" aria-label="Качество">
+      <option value="">Любое качество</option>
+      <option value="4k">4K и выше</option>
+      <option value="fhd">Full HD и выше</option>
+      <option value="hd">HD и выше</option>
+      <option value="sd">SD и выше</option>
+    </select>
+
+    <select [value]="sort()" (change)="onSort($event)" aria-label="Сортировка" class="sort-select">
+      @for (s of sortOptions; track s.id) {
+        <option [value]="s.id">{{ s.title }}</option>
+      }
+    </select>
+
+    <span class="filters-sep" aria-hidden="true"></span>
+
+    @if (hasFilters()) {
+      <span class="filter-count">{{ filteredItems().length }} из {{ items().length }}</span>
+      <button class="filter-reset" (click)="resetFilters()">Сбросить</button>
+    }
+  </div>
+
+  @if (loading() && !items().length) {
+    <div class="page-grid skeletons">
+      @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track _) {
+        <div class="card sk">
+          <div class="poster sk-bg"></div>
+          <span class="sk-line sk-bg"></span><span class="sk-line short sk-bg"></span>
+        </div>
+      }
+    </div>
+  }
+
+  @if (error() && !loading()) {
+    <div class="state-block">
+      <h2>Что-то пошло не так</h2>
+      <p class="error-text">{{ error() }}</p>
+      <button class="btn primary" (click)="retry()">Повторить</button>
+    </div>
+  }
+
+  @if (items().length && sortedItems().length) {
+    <div class="page-grid" (keydown)="onGridKeydown($event)">
+      @for (item of sortedItems(); track item.url) {
+        <app-media-card [item]="item" />
+      }
+    </div>
+
+    <div class="load-more">
+      @if (hasMore()) {
+        <button class="btn ghost" (click)="loadMore()" [disabled]="loading()">
+          {{ loading() ? 'Загрузка…' : 'Загрузить ещё' }}
+        </button>
+      } @else if (!loading()) {
+        <span class="end-note">Это всё, что удалось найти</span>
+      }
+    </div>
+  } @else if (items().length && !filteredItems().length && !loading()) {
+    <div class="state-block">
+      <h2>Ничего не найдено под фильтры</h2>
+      <p>Попробуйте изменить условия отбора — или сбросьте фильтры.</p>
+      @if (hasMore()) {
+        <button class="btn ghost" (click)="loadMore()" [disabled]="loading()">Загрузить ещё</button>
+      }
+      <button class="btn primary" (click)="resetFilters()">Сбросить фильтры</button>
+    </div>
+  } @else if (!loading() && !error()) {
+    <div class="state-block">
+      <h2>Ничего не найдено</h2>
+      <p>Попробуйте изменить запрос или выбрать другую категорию.</p>
+    </div>
+  }
+</section>
