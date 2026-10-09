@@ -107,6 +107,42 @@ export class PlayerComponent {
   readonly controlsHidden = signal(false);
   /** «Театр»: крупная сцена, скрыты шапка и хоткеи, управление остаётся */
   readonly theater = signal(false);
+
+  /** Ambient-подсветка: копируем кадры видео в мини-канвас под сценой. */
+  private readonly ambientCanvas =
+    viewChild<ElementRef<HTMLCanvasElement>>('ambientCanvas');
+  private ambientRaf = 0;
+  private ambientCtx: CanvasRenderingContext2D | null = null;
+  private ambientHidden = false;
+
+  /**
+   * Ambient-подсветка включена, если в настройках и сцена играет видео
+   * напрямую (не через iframe-плеер источника — там кадры недоступны).
+   */
+  readonly ambientOn = computed(() => this.settings.get().ambient && !this.isPip() && !this.iframeUrl());
+
+  /**
+   * Раз в кадр (60fps) рисуем текущий кадр в крошечный 64×36 канвас,
+   * который CSS размывает и растягивает вокруг сцены. Дёшево (один drawImage
+   * в tiny canvas) и не трогает основной <video>.
+   */
+  private ambientLoop = (): void => {
+    this.ambientRaf = requestAnimationFrame(this.ambientLoop);
+    if (this.ambientHidden) return;
+    const video = this.videoEl()?.nativeElement;
+    const canvas = this.ambientCanvas()?.nativeElement;
+    if (!video || !canvas || video.readyState < 2) return;
+    if (!this.ambientCtx || this.ambientCtx.canvas !== canvas) {
+      this.ambientCtx = canvas.getContext('2d', { alpha: false });
+    }
+    const ctx = this.ambientCtx;
+    if (!ctx) return;
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    } catch {
+      /* кадр ещё не готов (декодирование) — пропускаем такт */
+    }
+  };
   /** идёт ли сейчас вывод в picture-in-picture */
   readonly pipActive = signal(false);
   /**
@@ -375,6 +411,23 @@ export class PlayerComponent {
 
     effect(() => {
       this.embedGroups.set(this.playerService.embedGroups());
+    });
+
+    // Ambient-подсветка: крутим мини-канвас, пока она включена и играет
+    // обычное видео (для iframe-плееров кадры недоступны)
+    effect((onCleanup) => {
+      if (!this.ambientOn()) {
+        this.ambientHidden = true;
+        return;
+      }
+      this.ambientHidden = false;
+      this.ambientRaf = requestAnimationFrame(this.ambientLoop);
+      onCleanup(() => {
+        cancelAnimationFrame(this.ambientRaf);
+        this.ambientRaf = 0;
+        this.ambientHidden = true;
+        this.ambientCtx = null;
+      });
     });
 
     // don't lose position when the window closes or the tab hides

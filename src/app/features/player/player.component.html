@@ -37,33 +37,41 @@
     <app-spinner />
   }
 
-  <div
-    class="stage"
-    #stage
-    [class.controls-off]="controlsHidden()"
-    (mousemove)="pokeControls()"
-    (mouseleave)="leaveStage()"
-  >
-    @if (iframeUrl(); as frame) {
-      <iframe
-        #frame
-        [src]="frame"
-        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-        allowfullscreen
-      ></iframe>
-    } @else {
-      <video
-        #video
-        autoplay
-        playsinline
-        preload="auto"
-        (click)="togglePlay()"
-        (dblclick)="toggleFullscreen()"
-      ></video>
+  <div class="stage-wrap">
+    @if (ambientOn()) {
+      <!-- Ambient: крошечная копия кадра размывается и подсвечивает темноту
+           вокруг сцены (как подсветка Ambilight у телевизоров) -->
+      <div class="ambient" aria-hidden="true">
+        <canvas #ambientCanvas width="64" height="36"></canvas>
+      </div>
     }
+    <div
+      class="stage"
+      #stage
+      [class.controls-off]="controlsHidden()"
+      (mousemove)="pokeControls()"
+      (mouseleave)="leaveStage()"
+    >
+      @if (iframeUrl(); as frame) {
+        <iframe
+          #frame
+          [src]="frame"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      } @else {
+        <video
+          #video
+          autoplay
+          playsinline
+          preload="auto"
+          (click)="togglePlay()"
+          (dblclick)="toggleFullscreen()"
+        ></video>
+      }
 
-    @if (!loading()) {
-      <div class="transport">
+      @if (!loading()) {
+        <div class="transport">
         <button
           type="button"
           class="t-btn"
@@ -176,6 +184,7 @@
         </button>
       </div>
     }
+  </div>
   </div>
 
   @if (error() && !loading()) {

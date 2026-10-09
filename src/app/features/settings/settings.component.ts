@@ -176,6 +176,10 @@ export class SettingsComponent {
     this.settings.update({ historyEnabled: !this.settings.get().historyEnabled });
   }
 
+  toggleAmbient(): void {
+    this.settings.update({ ambient: !this.settings.get().ambient });
+  }
+
   /** Записываем локальный путь к видеотеке из текстового поля (по change). */
   onLocalPathChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value.trim();

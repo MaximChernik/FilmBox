@@ -191,6 +191,20 @@
         <span class="knob"></span>
       </button>
     </div>
+    <div class="row">
+      <span class="name">Ambient-подсветка вокруг видео</span>
+      <button
+        type="button"
+        class="switch"
+        role="switch"
+        [attr.aria-checked]="settings.settings().ambient"
+        [class.on]="settings.settings().ambient"
+        aria-label="Ambient-подсветка вокруг видео"
+        (click)="toggleAmbient()"
+      >
+        <span class="knob"></span>
+      </button>
+    </div>
   </section>
 
   <section class="card">

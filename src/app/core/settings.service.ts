@@ -11,6 +11,8 @@ export interface AppSettings {
   homeTab: string;
   autoNext: boolean;
   historyEnabled: boolean;
+  /** Ambient-подсветка: размытая копия кадра «подсвечивает» темноту вокруг сцены. */
+  ambient: boolean;
   volume: number;
   muted: boolean;
   eqEnabled: boolean;
@@ -28,6 +30,7 @@ const DEFAULTS: AppSettings = {
   homeTab: 'home',
   autoNext: true,
   historyEnabled: true,
+  ambient: true,
   volume: 1,
   muted: false,
   eqEnabled: false,
