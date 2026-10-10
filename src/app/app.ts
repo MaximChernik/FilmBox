@@ -43,8 +43,7 @@ function createAudio(): AudioContext | null {
  * Звуки включения/выключения — «типа трейлерного ударного» референса
  * (zvukipro, измерен: 4 с, ровный саб 55 Гц без спада частоты, ~90% энергии
  * ниже 140 Гц, удар с пика в первые 50 мс, шумовой хвост с плато ~0.04
- * до ~1.7 с). Поверх бума звучит одна тональная нота (toneNote): на
- * включении — восходящая квинта, на выключении — нисходящая.
+ * до ~1.7 с). Без «вдоха», мелодии и звонков — только удар и хвост.
  */
 
 /** Шумовой слой: мгновенная атака, экспоненциальный спад; mid>0 задаёт
@@ -149,50 +148,9 @@ function boom(ctx: AudioContext, start: number, p: Boom): void {
   noiseHit(ctx, start + 0.45, 0.7, p.tailPeak * 0.45, p.tailLp * 1.3, p.tailMid * 0.4, 0.08);
 }
 
-/**
- * Одна тональная нота поверх бума: мягкая атака и длинный спад. Тембр
- * глухой: основной тон — чистый синус, октава сверху — синус того же
- * характера через lowpass (без яркого «звенка»). `glideTo` задаёт уход
- * тона за время `dur` — вверх при включении, вниз при выключении.
- */
-function toneNote(
-  ctx: AudioContext,
-  start: number,
-  freq: number,
-  dur: number,
-  peak: number,
-  glideTo = freq,
-): void {
-  const layer = (f: number, level: number, glide: number, lp = 0): void => {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    const g = ctx.createGain();
-    osc.frequency.setValueAtTime(f, start);
-    if (glide !== f) osc.frequency.exponentialRampToValueAtTime(glide, start + dur);
-    g.gain.setValueAtTime(0.0001, start);
-    g.gain.exponentialRampToValueAtTime(Math.max(peak * level, 0.002), start + 0.14);
-    g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
-    let tail: AudioNode = g;
-    if (lp > 0) {
-      const bq = ctx.createBiquadFilter();
-      bq.type = 'lowpass';
-      bq.frequency.value = lp;
-      g.connect(bq);
-      tail = bq;
-    }
-    osc.connect(g);
-    tail.connect(ctx.destination);
-    osc.start(start);
-    osc.stop(start + dur + 0.1);
-  };
-  layer(freq, 1, glideTo); // основной тон — глухой синус
-  layer(freq * 2, 0.22, glideTo * 2, 1200); // октава — тот же глухой тембр
-}
-
 /** Startup impact (~2.9s): 55 Hz swell with a long plateau tail.
  *  Атака растянута (~0.3 с набора) и щелчок почти убран — звук не «ударяет»,
- *  а мягко разворачивается, как растянутая дорожка. На разгоне бума
- *  (с ~0.5 с) поднимается нота E4 → A4: восходящая квинта «включения». */
+ *  а мягко разворачивается, как растянутая дорожка. */
 function playGreeting(): void {
   try {
     const ctx = createAudio();
@@ -212,16 +170,13 @@ function playGreeting(): void {
       subAttack: 0.26,
       clickAttack: 0.12,
     });
-    toneNote(ctx, ctx.currentTime + 0.5, 329.63, 1.9, 0.12, 440);
     setTimeout(() => void ctx.close().catch(() => undefined), 3200);
   } catch {
     // audio is cosmetic — never block startup
   }
 }
 
-/** Shutdown impact (~3.4s): the same swell, a bit lower and darker, fading out.
- *  Нота зеркальна включению: с той же E4 тон уходит вниз, к A3 —
- *  нисходящая квинта «выключения». */
+/** Shutdown impact (~3.4s): the same swell, a bit lower and darker, fading out. */
 function playFarewell(): void {
   try {
     const ctx = createAudio();
@@ -241,7 +196,6 @@ function playFarewell(): void {
       subAttack: 0.3,
       clickAttack: 0.14,
     });
-    toneNote(ctx, ctx.currentTime + 0.45, 329.63, 2.2, 0.1, 220);
     setTimeout(() => void ctx.close().catch(() => undefined), 3600);
   } catch {
     // audio is cosmetic — never block shutdown
