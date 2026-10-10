@@ -150,9 +150,10 @@ function boom(ctx: AudioContext, start: number, p: Boom): void {
 }
 
 /**
- * Одна тональная нота поверх бума: мягкая атака, длинный спад и слабая
- * октава сверху для «звонкости». `glideTo` задаёт уход тона за время `dur` —
- * вверх при включении, вниз при выключении.
+ * Одна тональная нота поверх бума: мягкая атака и длинный спад. Тембр
+ * глухой: основной тон — чистый синус, октава сверху — синус того же
+ * характера через lowpass (без яркого «звенка»). `glideTo` задаёт уход
+ * тона за время `dur` — вверх при включении, вниз при выключении.
  */
 function toneNote(
   ctx: AudioContext,
@@ -162,22 +163,30 @@ function toneNote(
   peak: number,
   glideTo = freq,
 ): void {
-  const layer = (type: OscillatorType, f: number, level: number, glide: number): void => {
+  const layer = (f: number, level: number, glide: number, lp = 0): void => {
     const osc = ctx.createOscillator();
-    osc.type = type;
+    osc.type = 'sine';
     const g = ctx.createGain();
     osc.frequency.setValueAtTime(f, start);
     if (glide !== f) osc.frequency.exponentialRampToValueAtTime(glide, start + dur);
     g.gain.setValueAtTime(0.0001, start);
     g.gain.exponentialRampToValueAtTime(Math.max(peak * level, 0.002), start + 0.14);
     g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
+    let tail: AudioNode = g;
+    if (lp > 0) {
+      const bq = ctx.createBiquadFilter();
+      bq.type = 'lowpass';
+      bq.frequency.value = lp;
+      g.connect(bq);
+      tail = bq;
+    }
     osc.connect(g);
-    g.connect(ctx.destination);
+    tail.connect(ctx.destination);
     osc.start(start);
     osc.stop(start + dur + 0.1);
   };
-  layer('sine', freq, 1, glideTo); // основной тон
-  layer('triangle', freq * 2, 0.26, glideTo * 2); // октава — тёплый «звон»
+  layer(freq, 1, glideTo); // основной тон — глухой синус
+  layer(freq * 2, 0.22, glideTo * 2, 1200); // октава — тот же глухой тембр
 }
 
 /** Startup impact (~2.9s): 55 Hz swell with a long plateau tail.
