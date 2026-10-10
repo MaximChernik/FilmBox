@@ -43,7 +43,8 @@ function createAudio(): AudioContext | null {
  * Звуки включения/выключения — «типа трейлерного ударного» референса
  * (zvukipro, измерен: 4 с, ровный саб 55 Гц без спада частоты, ~90% энергии
  * ниже 140 Гц, удар с пика в первые 50 мс, шумовой хвост с плато ~0.04
- * до ~1.7 с). Без «вдоха», мелодии и звонков — только удар и хвост.
+ * до ~1.7 с). Поверх бума звучит одна тональная нота (toneNote): на
+ * включении — восходящая квинта, на выключении — нисходящая.
  */
 
 /** Шумовой слой: мгновенная атака, экспоненциальный спад; mid>0 задаёт
@@ -148,9 +149,41 @@ function boom(ctx: AudioContext, start: number, p: Boom): void {
   noiseHit(ctx, start + 0.45, 0.7, p.tailPeak * 0.45, p.tailLp * 1.3, p.tailMid * 0.4, 0.08);
 }
 
+/**
+ * Одна тональная нота поверх бума: мягкая атака, длинный спад и слабая
+ * октава сверху для «звонкости». `glideTo` задаёт уход тона за время `dur` —
+ * вверх при включении, вниз при выключении.
+ */
+function toneNote(
+  ctx: AudioContext,
+  start: number,
+  freq: number,
+  dur: number,
+  peak: number,
+  glideTo = freq,
+): void {
+  const layer = (type: OscillatorType, f: number, level: number, glide: number): void => {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    const g = ctx.createGain();
+    osc.frequency.setValueAtTime(f, start);
+    if (glide !== f) osc.frequency.exponentialRampToValueAtTime(glide, start + dur);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak * level, 0.002), start + 0.14);
+    g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + dur + 0.1);
+  };
+  layer('sine', freq, 1, glideTo); // основной тон
+  layer('triangle', freq * 2, 0.26, glideTo * 2); // октава — тёплый «звон»
+}
+
 /** Startup impact (~2.9s): 55 Hz swell with a long plateau tail.
  *  Атака растянута (~0.3 с набора) и щелчок почти убран — звук не «ударяет»,
- *  а мягко разворачивается, как растянутая дорожка. */
+ *  а мягко разворачивается, как растянутая дорожка. На разгоне бума
+ *  (с ~0.5 с) поднимается нота E4 → A4: восходящая квинта «включения». */
 function playGreeting(): void {
   try {
     const ctx = createAudio();
@@ -170,13 +203,16 @@ function playGreeting(): void {
       subAttack: 0.26,
       clickAttack: 0.12,
     });
+    toneNote(ctx, ctx.currentTime + 0.5, 329.63, 1.9, 0.12, 440);
     setTimeout(() => void ctx.close().catch(() => undefined), 3200);
   } catch {
     // audio is cosmetic — never block startup
   }
 }
 
-/** Shutdown impact (~3.4s): the same swell, a bit lower and darker, fading out. */
+/** Shutdown impact (~3.4s): the same swell, a bit lower and darker, fading out.
+ *  Нота зеркальна включению: с той же E4 тон уходит вниз, к A3 —
+ *  нисходящая квинта «выключения». */
 function playFarewell(): void {
   try {
     const ctx = createAudio();
@@ -196,6 +232,7 @@ function playFarewell(): void {
       subAttack: 0.3,
       clickAttack: 0.14,
     });
+    toneNote(ctx, ctx.currentTime + 0.45, 329.63, 2.2, 0.1, 220);
     setTimeout(() => void ctx.close().catch(() => undefined), 3600);
   } catch {
     // audio is cosmetic — never block shutdown
