@@ -93,12 +93,17 @@ function subHit(
   osc.frequency.exponentialRampToValueAtTime(f1, start + dur);
   g.gain.setValueAtTime(0.0001, start);
   g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), start + attack);
-  g.gain.exponentialRampToValueAtTime(Math.max(stage.g, 0.002), start + stage.t);
-  g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
+  // ступень спада обязана начаться строго после атаки: при attack === stage.t
+  // две экспоненты накладываются в одну точку, кривая рвётся и в пике
+  // слышится хрип (мгновенный скачок громкости)
+  const stageEnd = start + Math.max(stage.t, attack + 0.02);
+  const end = start + Math.max(dur, stageEnd - start + 0.05);
+  g.gain.exponentialRampToValueAtTime(Math.max(stage.g, 0.002), stageEnd);
+  g.gain.exponentialRampToValueAtTime(0.0006, end);
   osc.connect(g);
   g.connect(ctx.destination);
   osc.start(start);
-  osc.stop(start + dur + 0.1);
+  osc.stop(end + 0.1);
 }
 
 interface Boom {
@@ -128,7 +133,8 @@ function boom(ctx: AudioContext, start: number, p: Boom): void {
     noiseHit(ctx, start, Math.max(0.3, p.clickAttack * 3), p.clickPeak, p.clickLp, 0, p.clickAttack);
   }
   noiseHit(ctx, start, p.tailDur, p.tailPeak, p.tailLp, p.tailMid); // хвост
-  noiseHit(ctx, start + 0.45, 0.7, p.tailPeak * 0.45, p.tailLp * 1.3, p.tailMid * 0.4); // отражение
+  // отражение: мягкая атака (~0.08 с), чтобы посреди хвоста не было щелчка
+  noiseHit(ctx, start + 0.45, 0.7, p.tailPeak * 0.45, p.tailLp * 1.3, p.tailMid * 0.4, 0.08);
 }
 
 /** Startup impact (~2.9s): 55 Hz swell with a long plateau tail.
@@ -141,19 +147,19 @@ function playGreeting(): void {
     boom(ctx, ctx.currentTime + 0.01, {
       f0: 55,
       f1: 55,
-      subDur: 0.62,
-      subPeak: 0.48,
-      subStage: { t: 0.3, g: 0.16 },
+      subDur: 0.95,
+      subPeak: 0.46,
+      subStage: { t: 0.5, g: 0.15 },
       clickLp: 900,
-      clickPeak: 0.07,
+      clickPeak: 0.06,
       tailLp: 1200,
       tailPeak: 0.052,
       tailMid: 0.028,
       tailDur: 2.1,
-      subAttack: 0.3,
+      subAttack: 0.26,
       clickAttack: 0.12,
     });
-    setTimeout(() => void ctx.close().catch(() => undefined), 3000);
+    setTimeout(() => void ctx.close().catch(() => undefined), 3200);
   } catch {
     // audio is cosmetic — never block startup
   }
@@ -167,19 +173,19 @@ function playFarewell(): void {
     boom(ctx, ctx.currentTime + 0.01, {
       f0: 46,
       f1: 46,
-      subDur: 0.75,
-      subPeak: 0.42,
-      subStage: { t: 0.34, g: 0.14 },
+      subDur: 1.1,
+      subPeak: 0.4,
+      subStage: { t: 0.56, g: 0.13 },
       clickLp: 700,
-      clickPeak: 0.05,
+      clickPeak: 0.045,
       tailLp: 900,
       tailPeak: 0.046,
       tailMid: 0.025,
       tailDur: 2.3,
-      subAttack: 0.34,
+      subAttack: 0.3,
       clickAttack: 0.14,
     });
-    setTimeout(() => void ctx.close().catch(() => undefined), 3500);
+    setTimeout(() => void ctx.close().catch(() => undefined), 3600);
   } catch {
     // audio is cosmetic — never block shutdown
   }
