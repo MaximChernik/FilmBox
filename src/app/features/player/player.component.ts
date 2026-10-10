@@ -774,15 +774,17 @@ export class PlayerComponent {
     if (stream.type === 'hls' && Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
       hls.on(Hls.Events.ERROR, (_evt, data) => {
-        if (data.fatal) {
-          const code = (data.response as { code?: number } | undefined)?.code;
-          const fragUrl = (data.frag as { url?: string } | undefined)?.url;
-          this.error.set(
-            `Ошибка воспроизведения: ${data.details}${code ? ` (HTTP ${code})` : ''}` +
-              (fragUrl ? ` [${fragUrl.slice(0, 120)}]` : ''),
-          );
-          this.noteSourceOutcome('fail');
-        }
+        if (!data.fatal) return;
+        // прямой поток мёртв — молча пробуем следующий плеер карточки,
+        // как это уже делаем для iframe-сцен (см. noteDeadStage)
+        if (this.tryNextTab()) return;
+        const code = (data.response as { code?: number } | undefined)?.code;
+        const fragUrl = (data.frag as { url?: string } | undefined)?.url;
+        this.error.set(
+          `Ошибка воспроизведения: ${data.details}${code ? ` (HTTP ${code})` : ''}` +
+            (fragUrl ? ` [${fragUrl.slice(0, 120)}]` : ''),
+        );
+        this.noteSourceOutcome('fail');
       });
       const syncAudioTracks = () => this.syncAudioTracks(hls, episode);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -1077,6 +1079,21 @@ export class PlayerComponent {
     const dur = saved.duration ?? 0;
     if (dur > 0 && at >= dur * 0.95) return; // досмотрено — начинаем заново
     void this.stageSync('seek', at);
+  }
+
+  /**
+   * Нативный <video> упал (битая/протухшая ссылка): молча пробуем следующий
+   * плеер карточки — тот же ход, что и для мёртвого iframe-кадра. Если
+   * запасных плеев нет — показываем ошибку.
+   */
+  onVideoError(): void {
+    if (!this.stageNative() || this.loading()) return;
+    const video = this.videoEl()?.nativeElement;
+    // abort при смене src/эпизода — не сбой источника
+    if (!video || video.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
+    if (this.tryNextTab()) return;
+    this.error.set('Видео не загрузилось — откройте другой плеер в списке');
+    this.noteSourceOutcome('fail');
   }
 
   /**

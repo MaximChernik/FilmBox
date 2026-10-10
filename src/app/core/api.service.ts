@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import type { FrameRect, StageCtlOptions, StageCtlResult } from './electron-api';
 import type {
   CatalogRequest,
+  DiagEntry,
   MediaDetails,
   MediaSummary,
   PagedResult,
@@ -120,6 +121,14 @@ export class ApiService {
 
   onUpdateStatus(cb: (message: string) => void): void {
     this.api?.onUpdateStatus?.(cb);
+  }
+
+  diagnosticsList(): Promise<DiagEntry[]> {
+    return this.api?.diagnosticsList?.() ?? Promise.resolve([]);
+  }
+
+  diagnosticsClear(): Promise<void> {
+    return this.api?.diagnosticsClear?.() ?? Promise.resolve();
   }
 
   /** Subscribe to the pre-close farewell event (no-op in a plain browser). */

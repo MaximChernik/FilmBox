@@ -176,15 +176,61 @@ export class CatalogComponent {
       .map((h) => h.item);
   });
 
-  /** «Дайс»: кидаем кубик и открываем случайный фильм всего каталога. */
-  randomFilmRoll(): void {
+  /** Меню жанров у кнопки кубика (выпадает по ▾). */
+  readonly diceMenuOpen = signal(false);
+
+  /** Выбор жанра в меню кубика: '' — совсем любой, иначе конкретный жанр. */
+  pickDiceGenre(genre: string): void {
+    this.diceMenuOpen.set(false);
+    this.randomFilmRoll(genre);
+  }
+
+  /**
+   * Первый шаг клавиатурной навигации: стрелка при неустановленном фокусе
+   * (только что открыли страницу) ставит фокус на первую карточку сетки —
+   * дальше стрелки работают через (keydown) самой сетки. Меню кубика при
+   * этом закрывается по Esc.
+   */
+  private readonly onGridEntry = (e: KeyboardEvent): void => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (this.diceMenuOpen()) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.diceMenuOpen.set(false);
+      }
+      return;
+    }
+    if (!e.key.startsWith('Arrow')) return;
+    // открыт попап кастомного селекта — там своя навигация
+    if (document.querySelector('.sel-pop')) return;
+    const target = e.target as HTMLElement | null;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable)
+      return;
+    // фокус нигде конкретно — только тогда занимаем страницу стрелкой
+    if (target && target !== document.body && tag !== 'MAIN') return;
+    const first = document.querySelector<HTMLElement>('.page-grid [tabindex="0"]');
+    if (!first) return;
+    e.preventDefault();
+    first.focus();
+  };
+
+  /**
+   * «Дайс»: кидаем кубик и открываем случайный фильм всего каталога.
+   * genre — переопределение жанра из меню (undefined — жанр берётся из
+   * активных фильтров, как при обычном клике).
+   */
+  randomFilmRoll(genre?: string): void {
     if (this.diceBusy) return;
-    const loaded = this.sortedItems();
+    // фолбэк-пул тоже учитывает жанр, выбранный в меню кубика
+    const fallbackState: CatalogFilterState =
+      genre !== undefined ? { ...this.filterState(), genre } : this.filterState();
+    const loaded = filterItems(this.sortedItems(), fallbackState);
     this.diceBusy = true;
     this.diceRoll.update(spinDice);
     // кубик крутится вхолостую, пока идёт сбор пула по каталогу
     this.diceSpin = setInterval(() => this.diceRoll.update(spinDice), 560);
-    void this.pickRandomFromCatalog()
+    void this.pickRandomFromCatalog(genre)
       .catch(() => null)
       .then((pick) => {
         clearInterval(this.diceSpin);
@@ -203,11 +249,15 @@ export class CatalogComponent {
    * категория → случайная глубокая страница» запрашиваются параллельно,
    * из ответов собирается пул (дедуп по url) и выбирается один фильм.
    */
-  private async pickRandomFromCatalog(): Promise<MediaSummary | null> {
+  private async pickRandomFromCatalog(genre?: string): Promise<MediaSummary | null> {
     // «Локальные» — отдельный раздел с файлами, в общий пул не мешаем
     const ids = new Set(this.activeSourceIds().filter((id) => id !== 'local'));
     const sources = this.sourceList.filter((s) => ids.has(s.id));
     if (!sources.length) return null;
+
+    // выбор жанра в меню кубика перекрывает жанр из фильтров на этот бросок
+    const state: CatalogFilterState =
+      genre !== undefined ? { ...this.filterState(), genre } : this.filterState();
 
     const shuffled = [...sources].sort(() => Math.random() - 0.5);
     const jobs = shuffled.slice(0, 6).map((s) => {
@@ -217,7 +267,12 @@ export class CatalogComponent {
         (c) => c.id !== 'home' && c.id !== 'cartoons' && c.id !== 'anime' && c.id !== 'local',
       );
       const cat = cats.length ? cats[Math.floor(Math.random() * cats.length)] : undefined;
-      return { sourceId: s.id, categoryId: cat?.id, page: 1 + Math.floor(Math.random() * 120) };
+      return {
+        sourceId: s.id,
+        categoryId: cat?.id,
+        page: 1 + Math.floor(Math.random() * 120),
+        filters: state,
+      };
     });
 
     const pool: MediaSummary[] = [];
@@ -245,7 +300,7 @@ export class CatalogComponent {
     });
     // жанр/тип/год уже применены на стороне источника; рейтинг и качество —
     // локальные фильтры, добираем их тут же через общий filterItems
-    const list = filterItems(pool, this.filterState());
+    const list = filterItems(pool, state);
     return list.length ? list[Math.floor(Math.random() * list.length)] : null;
   }
 
@@ -257,6 +312,7 @@ export class CatalogComponent {
     sourceId: string;
     page: number;
     categoryId?: string;
+    filters: CatalogFilterState;
   }): Promise<MediaSummary[]> {
     let page = job.page;
     for (let attempt = 0; attempt < 6; attempt++) {
@@ -265,7 +321,7 @@ export class CatalogComponent {
           sourceId: job.sourceId,
           page,
           categoryId: job.categoryId,
-          filters: this.filterState(),
+          filters: job.filters,
         });
         if (res.items.length) return res.items;
       } catch {
@@ -436,10 +492,13 @@ export class CatalogComponent {
       });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
+    // стрелка с «чистой» страницы — ставим фокус на первую карточку сетки
+    window.addEventListener('keydown', this.onGridEntry);
 
     destroyRef.onDestroy(() => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('keydown', this.onGridEntry);
       if (stuckRaf) cancelAnimationFrame(stuckRaf);
       clearTimeout(resizeTimer);
       clearTimeout(this.filterTimer);
@@ -997,6 +1056,11 @@ export class CatalogComponent {
       case 'End':
         next = cards.length - 1;
         break;
+      case 'Escape':
+        // Esc с наведённой карточкой — назад (или домой, если назад некуда)
+        event.preventDefault();
+        this.nav.back(() => void this.router.navigate(['/']));
+        return;
       default:
         return;
     }

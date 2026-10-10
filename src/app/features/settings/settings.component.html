@@ -331,6 +331,50 @@
           stroke-linecap="round"
           stroke-linejoin="round"
         >
+          <path d="M9 2.4 16 14.6H2z" />
+          <path d="M9 7.2v3.2" />
+          <circle cx="9" cy="12.4" r="0.85" fill="currentColor" stroke="none" />
+        </svg>
+      </span>
+      <h2>Диагностика</h2>
+    </header>
+    @if (diag().length) {
+      <div class="diag-list">
+        @for (d of diag(); track $index) {
+          <div class="diag-row">
+            <span class="diag-time">{{ fmtDiagTime(d.t) }}</span>
+            <span class="diag-src">{{ d.name }}</span>
+            <span class="diag-op">{{ d.op }}</span>
+            <span class="diag-msg">{{ d.message }}</span>
+          </div>
+        }
+      </div>
+      <div class="row actions">
+        <button class="btn ghost" (click)="copyDiagnostics()">Копировать</button>
+        <button class="btn ghost" (click)="clearDiagnostics()">Очистить</button>
+      </div>
+      @if (diagNote()) {
+        <p class="hint">{{ diagNote() }}</p>
+      }
+    } @else {
+      <p class="hint">
+        Сбоев источников не было. Если что-то не загружается — причина появится здесь: источник,
+        операция и текст ошибки.
+      </p>
+    }
+  </section>
+
+  <section class="card">
+    <header class="card-head">
+      <span class="card-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 18 18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="9" cy="9" r="6.75" />
           <path d="M9 8.2v4" />
           <circle cx="9" cy="5.6" r="0.9" fill="currentColor" stroke="none" />

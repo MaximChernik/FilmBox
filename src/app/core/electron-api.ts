@@ -1,5 +1,6 @@
 import type {
   CatalogRequest,
+  DiagEntry,
   MediaDetails,
   MediaSummary,
   PagedResult,
@@ -92,6 +93,9 @@ export interface ElectronApi {
   onUpdateProgress?(cb: (pct: number) => void): void;
   /** Итоги проверки обновления («последняя версия», «ошибка» и т.п.). */
   onUpdateStatus?(cb: (message: string) => void): void;
+  /** Последние сбои источников (кольцевой буфер главного процесса). */
+  diagnosticsList?(): Promise<DiagEntry[]>;
+  diagnosticsClear?(): Promise<void>;
   /** Sync read from the durable state file (userData/filmbox-state.json). */
   stateGetSync?(key: string): string | null;
   stateSet?(key: string, value: string): Promise<void>;

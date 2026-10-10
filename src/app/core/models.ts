@@ -115,3 +115,13 @@ export interface StreamsRequest {
   /** Origin of the media card page; used as Referer for embed hosts that require it. */
   refererUrl?: string;
 }
+
+/** Запись диагностики: сбой источника в главном процессе (для настроек). */
+export interface DiagEntry {
+  /** epoch ms */
+  t: number;
+  sourceId: string;
+  name: string;
+  op: string;
+  message: string;
+}

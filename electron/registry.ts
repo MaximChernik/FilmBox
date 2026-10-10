@@ -837,18 +837,47 @@ export function createRegistry(ipcMain: IpcMain, shell: Shell): void {
     return parser;
   };
 
+  /**
+   * Кольцевой буфер последних ошибок источников — для вкладки
+   * «Диагностика» в настройках: пользователь присылает скриншот,
+   * и сразу видно, какой источник и с какой ошибкой упал.
+   */
+  const diagnostics: Array<{ t: number; sourceId: string; op: string; message: string }> = [];
+  const recordDiag = (op: string, sourceId: string, err: unknown): void => {
+    const message = String((err as Error)?.message ?? err).slice(0, 300);
+    diagnostics.unshift({ t: Date.now(), sourceId, op, message });
+    if (diagnostics.length > 60) diagnostics.length = 60;
+  };
+
+  ipcMain.handle('diagnostics:list', () =>
+    diagnostics.map((d) => ({ ...d, name: byId.get(d.sourceId)?.name ?? d.sourceId })),
+  );
+  ipcMain.handle('diagnostics:clear', () => {
+    diagnostics.length = 0;
+  });
+
   ipcMain.handle('sources:list', (): SourceInfo[] =>
     parsers.map((p) => ({ id: p.id, name: p.name, categories: p.categories })),
   );
 
   ipcMain.handle('catalog:list', async (_e, req: CatalogRequest): Promise<PagedResult> => {
     const parser = requireParser(req.sourceId);
-    return parser.getCatalog(Math.max(1, req.page || 1), req.categoryId, req.filters);
+    try {
+      return await parser.getCatalog(Math.max(1, req.page || 1), req.categoryId, req.filters);
+    } catch (err) {
+      recordDiag('Каталог', parser.id, err);
+      throw err;
+    }
   });
 
   ipcMain.handle('catalog:search', async (_e, req: SearchRequest): Promise<PagedResult> => {
     const parser = requireParser(req.sourceId);
-    return parser.search(req.query);
+    try {
+      return await parser.search(req.query);
+    } catch (err) {
+      recordDiag('Поиск', parser.id, err);
+      throw err;
+    }
   });
 
   ipcMain.handle(
@@ -879,7 +908,12 @@ export function createRegistry(ipcMain: IpcMain, shell: Shell): void {
 
   ipcMain.handle('media:details', async (_e, url: string): Promise<MediaDetails> => {
     const parser = parsers.find((p) => p.matchesUrl?.(url)) ?? requireParser();
-    return parser.getDetails(url);
+    try {
+      return await parser.getDetails(url);
+    } catch (err) {
+      recordDiag('Детали', parser.id, err);
+      throw err;
+    }
   });
 
   ipcMain.handle('media:streams', async (_e, req: StreamsRequest): Promise<StreamCatalog> => {
@@ -903,8 +937,13 @@ export function createRegistry(ipcMain: IpcMain, shell: Shell): void {
         fallbackEmbedUrl: toYouTubeEmbed(tab) ?? tab,
       };
     }
-    if (parser.resolveStreams) return parser.resolveStreams(req, referer);
-    return resolveEmbed(tab, parser.id, req.tabLabel ?? 'Плеер', referer);
+    try {
+      if (parser.resolveStreams) return await parser.resolveStreams(req, referer);
+      return await resolveEmbed(tab, parser.id, req.tabLabel ?? 'Плеер', referer);
+    } catch (err) {
+      recordDiag('Плеер', parser.id, err);
+      throw err;
+    }
   });
 
   /**

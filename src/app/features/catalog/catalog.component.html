@@ -15,26 +15,51 @@
 
   <div class="title-row">
     <h1 class="section-title">{{ title() }}</h1>
-    <button
-      class="btn ghost random"
-      (click)="randomFilmRoll()"
-      [disabled]="loading() && !items().length"
-      title="Случайный фильм"
-      aria-label="Случайный фильм"
-    >
-      <!-- объёмный кубик: 6 граней, при клике крутится в объёме -->
-      <span class="dice" aria-hidden="true" [style.transform]="diceTransform()">
-        @for (face of diceFaces; track face.cls) {
-          <span [class]="'face ' + face.cls">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              @for (pt of face.pips; track $index) {
-                <circle [attr.cx]="pt[0]" [attr.cy]="pt[1]" r="1.9" />
-              }
-            </svg>
-          </span>
-        }
-      </span>
-    </button>
+    <div class="random-wrap">
+      <button
+        class="btn ghost random"
+        (click)="randomFilmRoll()"
+        [disabled]="loading() && !items().length"
+        title="Случайный фильм из всего каталога"
+        aria-label="Случайный фильм"
+      >
+        <!-- объёмный кубик: 6 граней, при клике крутится в объёме -->
+        <span class="dice" aria-hidden="true" [style.transform]="diceTransform()">
+          @for (face of diceFaces; track face.cls) {
+            <span [class]="'face ' + face.cls">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                @for (pt of face.pips; track $index) {
+                  <circle [attr.cx]="pt[0]" [attr.cy]="pt[1]" r="1.9" />
+                }
+              </svg>
+            </span>
+          }
+        </span>
+      </button>
+      <button
+        class="btn ghost random-caret"
+        (click)="diceMenuOpen.set(!diceMenuOpen())"
+        [disabled]="loading() && !items().length"
+        title="Случайный фильм по жанру"
+        aria-label="Случайный фильм по жанру"
+        [attr.aria-expanded]="diceMenuOpen()"
+      >
+        ▾
+      </button>
+      @if (diceMenuOpen()) {
+        <div class="dice-backdrop" (click)="diceMenuOpen.set(false)"></div>
+        <div class="dice-menu" role="menu">
+          <button type="button" role="menuitem" class="any" (click)="pickDiceGenre('')">
+            Совсем любой
+          </button>
+          @for (genre of genreOptions(); track genre) {
+            <button type="button" role="menuitem" (click)="pickDiceGenre(genre)">
+              {{ genre }}
+            </button>
+          }
+        </div>
+      }
+    </div>
   </div>
 
   @if (continueItems().length) {

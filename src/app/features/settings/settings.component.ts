@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { LibraryService } from '../../core/library.service';
 import { SettingsService } from '../../core/settings.service';
-import type { Category, SourceInfo } from '../../core/models';
+import type { Category, DiagEntry, SourceInfo } from '../../core/models';
 
 @Component({
   templateUrl: './settings.component.html',
@@ -21,6 +21,9 @@ export class SettingsComponent {
   readonly updateMessage = signal('');
   /** Загрузка обновления: проценты или null (нет загрузки). */
   readonly updateProgress = signal<number | null>(null);
+  /** Последние сбои источников (вкладка «Диагностика»). */
+  readonly diag = signal<DiagEntry[]>([]);
+  readonly diagNote = signal('');
   private importInput?: HTMLInputElement;
 
   /** Sources displayed in the user-defined parse order. */
@@ -89,6 +92,35 @@ export class SettingsComponent {
       .checkUpdate()
       .then((r) => this.updateMessage.set(r.message))
       .catch(() => this.updateMessage.set('Ошибка проверки'));
+  }
+
+  /** Время сбоя для строки диагностики (только часы:минуты:секунды). */
+  fmtDiagTime(t: number): string {
+    return new Date(t).toLocaleTimeString('ru-RU');
+  }
+
+  /** Скопировать журнал сбоев — для отправки скриншота/текста. */
+  copyDiagnostics(): void {
+    const text = this.diag()
+      .map(
+        (d) =>
+          `${new Date(d.t).toLocaleString('ru-RU')} · ${d.name} · ${d.op} · ${d.message}`,
+      )
+      .join('\n');
+    void navigator.clipboard?.writeText(text).then(
+      () => this.diagNote.set('Скопировано в буфер обмена.'),
+      () => this.diagNote.set('Не удалось скопировать.'),
+    );
+  }
+
+  clearDiagnostics(): void {
+    void this.api
+      .diagnosticsClear()
+      .then(() => {
+        this.diag.set([]);
+        this.diagNote.set('');
+      })
+      .catch(() => undefined);
   }
 
   exportLibrary(): void {
@@ -162,6 +194,10 @@ export class SettingsComponent {
       });
       // итоги проверки из главного процесса — сообщение не висит вечно
       this.api.onUpdateStatus((message) => this.updateMessage.set(message));
+      this.api
+        .diagnosticsList()
+        .then((list) => this.diag.set(list))
+        .catch(() => undefined);
     }
   }
 
