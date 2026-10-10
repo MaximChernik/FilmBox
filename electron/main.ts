@@ -109,6 +109,8 @@ function createWindow(): void {
 
   // Заставка с прощальным логотипом: она остаётся на экране до самого
   // закрытия — откладываем destroy чуть дольше её анимации (1.6s).
+  // Звук выключения растянутый (~3.4s): даём ему почти догореть, иначе
+  // хвост обрезается вместе с окном.
   let farewellSent = false;
   win.on('close', (e) => {
     if (isSelfTest || farewellSent) return;
@@ -125,7 +127,7 @@ function createWindow(): void {
       } catch {
         // already closed
       }
-    }, 1650);
+    }, 2600);
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {

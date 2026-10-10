@@ -295,12 +295,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
+    /* та же ширина, что у кнопки кубика (36px) — пара выглядит ровно */
+    width: 36px;
     height: 36px;
     padding: 0;
     margin-top: -6px;
-    font-size: 12px;
-    line-height: 1;
+
+    .caret-ico {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   .dice-backdrop {

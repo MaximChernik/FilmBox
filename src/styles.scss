@@ -276,6 +276,19 @@ select {
     }
   }
 
+  /* Длинный список (жанры) раскладывается в N столбцов — колонки в гриде,
+     группы-заголовки и «шапки» разворачиваются на всю ширину. */
+  &.sel-pop-cols {
+    display: grid;
+    grid-template-columns: repeat(var(--sel-pop-cols, 2), minmax(0, max-content));
+    column-gap: 2px;
+    align-content: start;
+
+    .sel-pop-group {
+      grid-column: 1 / -1;
+    }
+  }
+
   /* тонкий скролл: большой палец — иначе на тёмном фоне непонятно,
      что под обрезом есть ещё пункты */
   &::-webkit-scrollbar {

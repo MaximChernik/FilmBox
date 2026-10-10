@@ -106,6 +106,13 @@ export function installStyledSelects(): void {
 
     const box = document.createElement('div');
     box.className = 'sel-pop';
+    // длинные списки (жанры) удобнее читать в 2 столбца — колонка не уползает
+    // на пол-экрана. Задаётся data-pop="2" на самом <select>.
+    const cols = Number(sel.getAttribute('data-pop'));
+    if (Number.isFinite(cols) && cols > 1) {
+      box.classList.add('sel-pop-cols');
+      box.style.setProperty('--sel-pop-cols', String(Math.min(4, Math.round(cols))));
+    }
     box.setAttribute('role', 'listbox');
     items = [];
     let group: HTMLOptGroupElement | null = null;

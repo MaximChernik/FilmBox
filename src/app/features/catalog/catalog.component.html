@@ -44,7 +44,19 @@
         aria-label="Случайный фильм по жанру"
         [attr.aria-expanded]="diceMenuOpen()"
       >
-        ▾
+        <!-- воронка: отбор случайного фильма по жанру -->
+        <svg
+          class="caret-ico"
+          viewBox="0 0 18 18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M2.6 3.4h12.8L10.4 8.7v4.4l-2.8 1.5V8.7z" />
+        </svg>
       </button>
       @if (diceMenuOpen()) {
         <div class="dice-backdrop" (click)="diceMenuOpen.set(false)"></div>
@@ -79,7 +91,12 @@
       }
     </select>
 
-    <select [value]="filterGenre()" (change)="onFilterGenre($event)" aria-label="Жанр">
+    <select
+      [value]="filterGenre()"
+      (change)="onFilterGenre($event)"
+      aria-label="Жанр"
+      data-pop="2"
+    >
       <option value="">Все жанры</option>
       @for (genre of genreOptions(); track genre) {
         <option [value]="genre">{{ genre }}</option>

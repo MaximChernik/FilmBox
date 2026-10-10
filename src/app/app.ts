@@ -44,6 +44,7 @@ function noiseHit(
   peak: number,
   lpFreq: number,
   mid = 0,
+  attack = 0.004,
 ): void {
   const len = Math.max(1, Math.ceil(ctx.sampleRate * (dur + 0.1)));
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -57,7 +58,7 @@ function noiseHit(
   lp.frequency.value = lpFreq;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, start);
-  g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), start + 0.004);
+  g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), start + attack);
   if (mid > 0) {
     g.gain.exponentialRampToValueAtTime(Math.max(mid, 0.002), start + dur * 0.4);
     g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
@@ -72,7 +73,9 @@ function noiseHit(
 }
 
 /** Саб-слой: синус (в референсе — ровные 55 Гц, без дропа) с «ударным»
- *  профилем: первый 0.3 с спад медленнее, дальше — быстрый уход в тишину. */
+ *  профилем: первый 0.3 с спад медленнее, дальше — быстрый уход в тишину.
+ *  attack — сколько секунд набирается пик: малое даёт резкий удар, большее
+ *  мягко разворачивает дорожку. */
 function subHit(
   ctx: AudioContext,
   start: number,
@@ -81,6 +84,7 @@ function subHit(
   dur: number,
   peak: number,
   stage: { t: number; g: number },
+  attack = 0.006,
 ): void {
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
@@ -88,7 +92,7 @@ function subHit(
   osc.frequency.setValueAtTime(f0, start);
   osc.frequency.exponentialRampToValueAtTime(f1, start + dur);
   g.gain.setValueAtTime(0.0001, start);
-  g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), start + 0.006);
+  g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), start + attack);
   g.gain.exponentialRampToValueAtTime(Math.max(stage.g, 0.002), start + stage.t);
   g.gain.exponentialRampToValueAtTime(0.0006, start + dur);
   osc.connect(g);
@@ -109,17 +113,27 @@ interface Boom {
   tailPeak: number;
   tailMid: number;
   tailDur: number;
+  /** Атака саба: во сколько секунд достигается пик. Мало (<0.1) — резкий
+   *  «ударный» клик; больше (0.3+) — мягкий разгон, как растянутая дорожка. */
+  subAttack: number;
+  /** Атака щелчка: растягивает вспышку атаки (0.004 = мгновенный клик). */
+  clickAttack: number;
 }
 
-/** Полный удар: саб + щелчок + длинный хвост с плато + отражение на ~0.45 с. */
+/** Полный удар: саб + щелчок + длинный хвост с плато + отражение на ~0.45 с.
+ *  Параметры атаки смягчают переход — звук не «щёлкает», а разворачивается. */
 function boom(ctx: AudioContext, start: number, p: Boom): void {
-  subHit(ctx, start, p.f0, p.f1, p.subDur, p.subPeak, p.subStage);
-  noiseHit(ctx, start, 0.3, p.clickPeak, p.clickLp); // темноватый щелчок атаки
+  subHit(ctx, start, p.f0, p.f1, p.subDur, p.subPeak, p.subStage, p.subAttack);
+  if (p.clickPeak > 0) {
+    noiseHit(ctx, start, Math.max(0.3, p.clickAttack * 3), p.clickPeak, p.clickLp, 0, p.clickAttack);
+  }
   noiseHit(ctx, start, p.tailDur, p.tailPeak, p.tailLp, p.tailMid); // хвост
   noiseHit(ctx, start + 0.45, 0.7, p.tailPeak * 0.45, p.tailLp * 1.3, p.tailMid * 0.4); // отражение
 }
 
-/** Startup impact (~2.6s): 55 Hz slam with a dark snap and long plateau tail. */
+/** Startup impact (~2.9s): 55 Hz swell with a long plateau tail.
+ *  Атака растянута (~0.3 с набора) и щелчок почти убран — звук не «ударяет»,
+ *  а мягко разворачивается, как растянутая дорожка. */
 function playGreeting(): void {
   try {
     const ctx = createAudio();
@@ -129,21 +143,23 @@ function playGreeting(): void {
       f1: 55,
       subDur: 0.62,
       subPeak: 0.48,
-      subStage: { t: 0.28, g: 0.16 },
-      clickLp: 1500,
-      clickPeak: 0.19,
+      subStage: { t: 0.3, g: 0.16 },
+      clickLp: 900,
+      clickPeak: 0.07,
       tailLp: 1200,
       tailPeak: 0.052,
       tailMid: 0.028,
       tailDur: 2.1,
+      subAttack: 0.3,
+      clickAttack: 0.12,
     });
-    setTimeout(() => void ctx.close().catch(() => undefined), 2800);
+    setTimeout(() => void ctx.close().catch(() => undefined), 3000);
   } catch {
     // audio is cosmetic — never block startup
   }
 }
 
-/** Shutdown impact (~3s): the same slam, a bit lower and darker, fading out. */
+/** Shutdown impact (~3.4s): the same swell, a bit lower and darker, fading out. */
 function playFarewell(): void {
   try {
     const ctx = createAudio();
@@ -153,15 +169,17 @@ function playFarewell(): void {
       f1: 46,
       subDur: 0.75,
       subPeak: 0.42,
-      subStage: { t: 0.32, g: 0.14 },
-      clickLp: 1000,
-      clickPeak: 0.13,
+      subStage: { t: 0.34, g: 0.14 },
+      clickLp: 700,
+      clickPeak: 0.05,
       tailLp: 900,
       tailPeak: 0.046,
       tailMid: 0.025,
       tailDur: 2.3,
+      subAttack: 0.34,
+      clickAttack: 0.14,
     });
-    setTimeout(() => void ctx.close().catch(() => undefined), 3200);
+    setTimeout(() => void ctx.close().catch(() => undefined), 3500);
   } catch {
     // audio is cosmetic — never block shutdown
   }
