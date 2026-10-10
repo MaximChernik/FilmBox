@@ -83,7 +83,10 @@
       </div>
     }
     <div class="hover">
-      <span class="play">▶</span>
+      @if (!teaserOn()) {
+        <!-- плей мешает видео тизера — во время воспроизведения скрыт -->
+        <span class="play">▶</span>
+      }
       <div class="quick">
         <button
           type="button"
@@ -103,7 +106,30 @@
           [attr.aria-label]="'Смотреть позже'"
           (click)="toggleLater($event)"
         >
-          ⏱
+          @if (isLater()) {
+            <!-- в очереди: закрашенные стрелки часов -->
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7z"
+              />
+            </svg>
+          } @else {
+            <!-- не добавлено: контурные часы -->
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          }
         </button>
         @if (removable()) {
           <button
