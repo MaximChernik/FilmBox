@@ -322,6 +322,7 @@ export class CatalogComponent {
           page,
           categoryId: job.categoryId,
           filters: job.filters,
+          probe: true,
         });
         if (res.items.length) return res.items;
       } catch {

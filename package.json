@@ -1,7 +1,7 @@
 {
   "name": "film-agg",
   "productName": "FilmBox",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Локальный агрегатор фильмов и сериалов",
   "main": "dist-electron/main.js",
   "scripts": {

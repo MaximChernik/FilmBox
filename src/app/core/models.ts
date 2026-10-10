@@ -101,6 +101,12 @@ export interface CatalogRequest {
   categoryId?: string;
   /** Фильтры для серверной фильтрации на стороне источника. */
   filters?: CatalogFilterState;
+  /**
+   * Разведочный запрос (кнопка «Случайный фильм»): дёргаем случайную глубокую
+   * страницу, поэтому «за глубиной / пусто» — штатный исход, а не сбой.
+   * Такие ошибки не пишутся в диагностику.
+   */
+  probe?: boolean;
 }
 
 export interface SearchRequest {
@@ -116,7 +122,7 @@ export interface StreamsRequest {
   refererUrl?: string;
 }
 
-/** ������ �����������: ���� ��������� � ������� �������� (��� ��������). */
+/** ������ �����������: ���� ��������� � ������� �������� (��� ��������). */
 export interface DiagEntry {
   /** epoch ms */
   t: number;

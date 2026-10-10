@@ -865,7 +865,10 @@ export function createRegistry(ipcMain: IpcMain, shell: Shell): void {
     try {
       return await parser.getCatalog(Math.max(1, req.page || 1), req.categoryId, req.filters);
     } catch (err) {
-      recordDiag('Каталог', parser.id, err);
+      // Разведка кубика: «за глубиной/пусто» — штатный исход, не сбой.
+      // Ошибка всё равно уходит наверх (куbic уменьшит страницу), но в
+      // диагностику не попадает, чтобы не засорять реальные сбои.
+      if (!req.probe) recordDiag('Каталог', parser.id, err);
       throw err;
     }
   });
