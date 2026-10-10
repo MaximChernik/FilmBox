@@ -173,6 +173,75 @@
         </svg>
       </a>
 
+      <!-- Колокольчик: новые серии отслеживаемых сериалов -->
+      <div class="bell-wrap">
+        <button
+          type="button"
+          class="icon-btn"
+          [class.active]="bellOpen()"
+          (click)="toggleBell()"
+          title="Новые серии"
+          aria-label="Уведомления о новых сериях"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+          @if (library.unreadCount()) {
+            <span class="bell-dot">{{ library.unreadCount() > 9 ? '9+' : library.unreadCount() }}</span>
+          }
+        </button>
+
+        @if (bellOpen()) {
+          <div class="bell-panel">
+            <div class="bell-head">
+              <b>Новые серии</b>
+              @if (library.alerts().length) {
+                <button type="button" class="bell-clear" (click)="library.clearAlerts()">
+                  Очистить
+                </button>
+              }
+            </div>
+            @if (!library.alerts().length) {
+              <p class="bell-empty">
+                Пока пусто. Откройте карточку сериала и нажмите «Следить» — здесь появятся
+                уведомления о новых сериях.
+              </p>
+            }
+            @for (a of library.alerts(); track a.url + a.at) {
+              <a
+                class="bell-item"
+                [class.unread]="!a.read"
+                [routerLink]="['/details']"
+                [queryParams]="{ u: a.url }"
+                (click)="bellOpen.set(false)"
+              >
+                @if (a.poster) {
+                  <img class="bell-poster" [src]="a.poster" alt="" loading="lazy" />
+                } @else {
+                  <span class="bell-poster ph" aria-hidden="true"><app-poster-ph /></span>
+                }
+                <span class="bell-body">
+                  <span class="bell-title">{{ a.title }}</span>
+                  <span class="bell-text">{{ a.text }}</span>
+                </span>
+                <span class="bell-time">{{ alertTime(a.at) }}</span>
+              </a>
+            }
+          </div>
+        }
+      </div>
+
       <button
         type="button"
         (click)="toggleSettings()"

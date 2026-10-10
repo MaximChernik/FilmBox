@@ -582,6 +582,141 @@
     border-color: rgba(229, 9, 20, 0.9);
     box-shadow: 0 5px 16px rgba(229, 9, 20, 0.35);
   }
+
+  position: relative; /* точка-счётчик колокольчика */
+}
+
+/* — Колокольчик «Новые серии» — */
+.bell-wrap {
+  position: relative;
+}
+
+.bell-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff2431, var(--accent, #e50914));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #17171f;
+  pointer-events: none;
+}
+
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  background: #17171f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.7);
+  padding: 8px;
+  z-index: 60;
+}
+
+.bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 8px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.bell-clear {
+  background: none;
+  border: none;
+  color: var(--text-dim, #8b8b99);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.bell-empty {
+  margin: 0;
+  padding: 10px 8px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim, #8b8b99);
+}
+
+.bell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.14s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &.unread .bell-title {
+    color: #ffb3b8; /* непрочитанное — подсвеченным заголовком */
+  }
+}
+
+.bell-poster {
+  width: 34px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 5px;
+  background: #1f1f2a;
+  flex-shrink: 0;
+
+  &.ph {
+    display: block;
+    overflow: hidden;
+  }
+}
+
+.bell-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bell-title {
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bell-text {
+  font-size: 12px;
+  color: #a8c1ff;
+}
+
+.bell-time {
+  font-size: 11px;
+  color: var(--text-dim, #8b8b99);
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .env-banner {

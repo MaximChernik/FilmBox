@@ -12,7 +12,8 @@ const GAP_MS = 1200;
 /**
  * Слежение за новыми сериями: периодически перечитывает детали отслеживаемых
  * сериалов и при изменении `lastEpisode`/`seasonsCount` шлёт системное
- * уведомление (Windows Notification через IPC `app:notify`).
+ * уведомление (Windows Notification через IPC `app:notify`) и сообщение
+ * в колокольчик шапки (лента `library.alerts`).
  */
 @Injectable({ providedIn: 'root' })
 export class FollowCheckService {
@@ -46,7 +47,7 @@ export class FollowCheckService {
         this.seen.set(url, base);
         try {
           const d = await this.api.loadDetails(url);
-          this.handle(url, base, d.lastEpisode, d.seasonsCount, d.title);
+          this.handle(url, entry, base, d.lastEpisode, d.seasonsCount, d.title);
         } catch {
           // источник недоступен — пропускаем, следующий тик попробует снова
         }
@@ -59,16 +60,26 @@ export class FollowCheckService {
 
   private handle(
     url: string,
+    entry: { item: { title: string; poster?: string } },
     base: { lastEpisode?: string; seasonsCount?: string },
     lastEpisode: string | undefined,
     seasonsCount: string | undefined,
     title: string,
   ): void {
-    const episodeChanged = !!lastEpisode && lastEpisode !== base.lastEpisode;
-    const seasonChanged = !!seasonsCount && seasonsCount !== base.seasonsCount;
-    if (episodeChanged || seasonChanged) {
-      const what = seasonChanged && !episodeChanged ? `сезон ${seasonsCount}` : lastEpisode;
+    // уведомляем только по тому полю, база которого уже известна: следение,
+    // включённое с карточки без lastEpisode, сначала ставит baseline тихо
+    const newEpisode = !!base.lastEpisode && !!lastEpisode && lastEpisode !== base.lastEpisode;
+    const newSeason = !!base.seasonsCount && !!seasonsCount && seasonsCount !== base.seasonsCount;
+    if (newEpisode || newSeason) {
+      const what = newSeason && !newEpisode ? `сезон ${seasonsCount}` : lastEpisode;
+      // системный тост Windows + сообщение в колокольчик шапки
       void this.api.notify(`Новая серия: «${title}» — ${what}`).catch(() => undefined);
+      this.library.pushAlert({
+        url,
+        title,
+        poster: entry.item.poster,
+        text: what ?? '',
+      });
     }
     this.seen.set(url, { lastEpisode: lastEpisode ?? base.lastEpisode, seasonsCount });
     this.library.updateFollow(url, {

@@ -11,6 +11,9 @@
       <a class="chip" routerLink="/history" [class.active]="tab() === 'history'">
         История ({{ historyItems().length }})
       </a>
+      <a class="chip" routerLink="/follows" [class.active]="tab() === 'follows'">
+        Отслеживаю ({{ follows().length }})
+      </a>
       @if (list().length) {
         <button class="chip danger" (click)="clearCurrent()">Очистить</button>
       }
@@ -65,6 +68,14 @@
           <h2>Список «Смотреть позже» пуст</h2>
           <p>Добавляйте сюда интересные тайтлы, чтобы не потерять их — они ждут вас здесь.</p>
           <a class="btn primary" routerLink="/">Перейти в каталог</a>
+        }
+        @case ('follows') {
+          <h2>Вы пока ни за кем не следите</h2>
+          <p>
+            Откройте карточку сериала и нажмите «Следить» — при выходе новых серий появится
+            уведомление в колокольчике шапки и системный тост Windows.
+          </p>
+          <a class="btn primary" routerLink="/category/serials">Перейти к сериалам</a>
         }
         @default {
           <h2>История просмотра пуста</h2>

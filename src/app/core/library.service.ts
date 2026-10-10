@@ -28,8 +28,10 @@ const PROGRESS_KEY = 'filmbox:progress';
 const RATING_KEY = 'filmbox:ratings';
 const STATUS_KEY = 'filmbox:statuses';
 const FOLLOWS_KEY = 'filmbox:follows';
+const ALERTS_KEY = 'filmbox:alerts';
 const HISTORY_LIMIT = 60;
 const PROGRESS_LIMIT = 120;
+const ALERTS_LIMIT = 50;
 
 /**
  * Отслеживаемый сериал: помним последнюю известную серию/сезон, чтобы
@@ -43,6 +45,21 @@ export interface FollowEntry {
   /** последний известный сезон */
   seasonsCount?: string;
   checkedAt: number;
+}
+
+/**
+ * Сообщение в колокольчике шапки: проверка нашла новую серию отслеживаемого
+ * сериала. Живёт отдельно от follows — серия может «всплыть» и после того,
+ * как сериал перестали отслеживать.
+ */
+export interface AlertEntry {
+  url: string;
+  title: string;
+  poster?: string;
+  /** что нового: «Сезон 2, Серия 5» */
+  text: string;
+  at: number;
+  read: boolean;
 }
 
 /** Статус просмотра материала. */
@@ -87,6 +104,9 @@ export class LibraryService {
   readonly follows = signal<Record<string, FollowEntry>>(
     readJson<Record<string, FollowEntry>>(FOLLOWS_KEY, {}),
   );
+  /** Лента «новых серий» для колокольчика в шапке (новые сверху). */
+  readonly alerts = signal<AlertEntry[]>(readJson<AlertEntry[]>(ALERTS_KEY, []));
+  readonly unreadCount = computed(() => this.alerts().filter((a) => !a.read).length);
 
   readonly favoriteUrls = computed(() => new Set(this.favorites().map((f) => f.url)));
   readonly laterUrls = computed(() => new Set(this.later().map((l) => l.url)));
@@ -128,6 +148,35 @@ export class LibraryService {
     const next = { ...this.follows(), [url]: { ...prev, ...patch, checkedAt: Date.now() } };
     this.follows.set(next);
     writeJson(FOLLOWS_KEY, next);
+  }
+
+  /** Снимает отслеживание со всех сериалов (кнопка «Очистить» во вкладке). */
+  clearFollows(): void {
+    this.follows.set({});
+    writeJson(FOLLOWS_KEY, {});
+  }
+
+  /** Добавляет сообщение о новой серии в колокольчик (новые — сверху). */
+  pushAlert(alert: Omit<AlertEntry, 'at' | 'read'>): void {
+    // одна серия = одно сообщение: повторный приход той же серии затирает
+    const next = [
+      { ...alert, at: Date.now(), read: false },
+      ...this.alerts().filter((a) => !(a.url === alert.url && a.text === alert.text)),
+    ].slice(0, ALERTS_LIMIT);
+    this.alerts.set(next);
+    writeJson(ALERTS_KEY, next);
+  }
+
+  /** Панель колокольчика открыли — все сообщения прочитаны. */
+  markAlertsRead(): void {
+    if (!this.unreadCount()) return;
+    this.alerts.update((list) => list.map((a) => (a.read ? a : { ...a, read: true })));
+    writeJson(ALERTS_KEY, this.alerts());
+  }
+
+  clearAlerts(): void {
+    this.alerts.set([]);
+    writeJson(ALERTS_KEY, []);
   }
 
   toggleFavorite(item: MediaSummary): void {
@@ -216,6 +265,7 @@ export class LibraryService {
         ratings: this.ratings(),
         statuses: this.statuses(),
         follows: this.follows(),
+        alerts: this.alerts(),
       },
       null,
       2,
@@ -232,6 +282,7 @@ export class LibraryService {
       ratings?: Record<string, number>;
       statuses?: Record<string, WatchStatus>;
       follows?: Record<string, FollowEntry>;
+      alerts?: AlertEntry[];
     };
     if (!data || typeof data !== 'object') throw new Error('Неверный формат файла');
     if (Array.isArray(data.favorites)) {
@@ -261,6 +312,10 @@ export class LibraryService {
     if (data.follows && typeof data.follows === 'object') {
       this.follows.set(data.follows);
       writeJson(FOLLOWS_KEY, data.follows);
+    }
+    if (data.alerts && Array.isArray(data.alerts)) {
+      this.alerts.set(data.alerts);
+      writeJson(ALERTS_KEY, data.alerts);
     }
   }
 

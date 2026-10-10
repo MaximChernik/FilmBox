@@ -5,7 +5,7 @@ import { LibraryService } from '../../core/library.service';
 import type { MediaSummary } from '../../core/models';
 import { MediaCardComponent } from '../../shared/media-card/media-card.component';
 
-type Tab = 'favorites' | 'later' | 'history';
+type Tab = 'favorites' | 'later' | 'history' | 'follows';
 
 @Component({
   templateUrl: './library.component.html',
@@ -21,11 +21,15 @@ export class LibraryComponent {
   readonly favorites = this.library.favorites;
   readonly later = this.library.later;
   readonly historyItems = computed(() => this.library.history().map((h) => h.item));
+  /** Вкладка «Отслеживаю»: карточки отслеживаемых сериалов. */
+  readonly follows = computed(() => Object.values(this.library.follows()).map((f) => f.item));
 
   readonly list = computed<MediaSummary[]>(() => {
     switch (this.tab()) {
       case 'later':
         return this.later();
+      case 'follows':
+        return this.follows();
       case 'history': {
         const items = this.historyItems();
         switch (this.historyFilter()) {
@@ -62,6 +66,8 @@ export class LibraryComponent {
         return 'Смотреть позже';
       case 'history':
         return 'История просмотра';
+      case 'follows':
+        return 'Отслеживаю';
       default:
         return 'Избранное';
     }
@@ -82,7 +88,9 @@ export class LibraryComponent {
       ? 'later'
       : url.startsWith('/history')
         ? 'history'
-        : 'favorites';
+        : url.startsWith('/follows')
+          ? 'follows'
+          : 'favorites';
     this.tab.set(tab);
   }
 
@@ -93,6 +101,9 @@ export class LibraryComponent {
         break;
       case 'history':
         this.library.clearHistory();
+        break;
+      case 'follows':
+        this.library.clearFollows();
         break;
       default:
         this.library.clearFavorites();

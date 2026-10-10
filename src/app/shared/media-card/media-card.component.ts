@@ -85,6 +85,18 @@ export class MediaCardComponent {
   });
   readonly isFavorite = computed(() => this.library.isFavorite(this.item().url));
   readonly isLater = computed(() => this.library.isLater(this.item().url));
+  /**
+   * Следить за новыми сериями можно у сериала; если источник не проставил
+   * `kind`, но прислал счётчики сезонов/серий — карточка явно сериалная.
+   */
+  readonly canFollow = computed(() => {
+    const it = this.item();
+    if (it.kind === 'serial') return true;
+    return (!it.kind || it.kind === 'unknown') && !!(it.seasonsCount || it.lastEpisode);
+  });
+  readonly isFollow = computed(
+    () => this.canFollow() && this.library.isFollow(this.item().url),
+  );
   /** 0–100: watched part of the last episode (0 hides the bar) */
   readonly watched = computed(() => this.library.watchedPercent(this.item().url));
   /** Есть на чём продолжать (в т.ч. без известной длительности — бар скрыт, точка есть). */
@@ -200,6 +212,12 @@ export class MediaCardComponent {
   toggleLater(event: Event): void {
     event.stopPropagation();
     this.library.toggleLater(this.library.summary(this.item()));
+  }
+
+  /** Слежение за новыми сериями: кнопка 🔔 на постере сериала. */
+  toggleFollow(event: Event): void {
+    event.stopPropagation();
+    this.library.toggleFollow(this.library.summary(this.item()));
   }
 
   removeItem(event: Event): void {

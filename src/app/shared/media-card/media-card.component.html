@@ -116,6 +116,19 @@
             ✕
           </button>
         }
+        @if (canFollow()) {
+          <button
+            type="button"
+            class="q-btn follow"
+            [class.on]="isFollow()"
+            [title]="isFollow() ? 'Отслеживать новые серии (нажмите, чтобы отключить)' : 'Следить за новыми сериями'"
+            [attr.aria-label]="'Отслеживать новые серии'"
+            [attr.aria-pressed]="isFollow()"
+            (click)="toggleFollow($event)"
+          >
+            {{ isFollow() ? '🔔' : '🔕' }}
+          </button>
+        }
       </div>
     </div>
     @if (teaserSrc(); as src) {

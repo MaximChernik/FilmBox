@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from './core/api.service';
 import { FollowCheckService } from './core/follow-check.service';
+import { LibraryService } from './core/library.service';
 import { SettingsService } from './core/settings.service';
 import { beginScrollReset, isScrollResetActive } from './core/scroll-reset';
 import type { Category, MediaSummary } from './core/models';
@@ -367,6 +368,7 @@ export class App {
   private readonly router = inject(Router);
   readonly api = inject(ApiService);
   readonly settings = inject(SettingsService);
+  readonly library = inject(LibraryService);
   private readonly followCheck = inject(FollowCheckService);
 
   readonly categories = signal<Category[]>([
@@ -394,6 +396,9 @@ export class App {
   readonly showToTop = signal(false);
 
   readonly splash = signal<'show' | 'closing' | 'exiting' | 'gone'>('show');
+
+  /** Панель колокольчика: лента «новых серий» отслеживаемых сериалов. */
+  readonly bellOpen = signal(false);
 
   /**
    * Отдельное PiP-окно: обвязка приложения (шапка, футер, «наверх»)
@@ -450,6 +455,11 @@ export class App {
     if (!pipWindow) this.followCheck.start();
     window.addEventListener('scroll', () => this.showToTop.set(window.scrollY > 600), {
       passive: true,
+    });
+    // колокольчик: клик вне панели закрывает её
+    document.addEventListener('click', (e) => {
+      if (!this.bellOpen()) return;
+      if (!(e.target as HTMLElement | null)?.closest('.bell-wrap')) this.bellOpen.set(false);
     });
     // hash navigations are same-document — browser scroll restoration could
     // put an old position back after our own reset
@@ -570,6 +580,28 @@ export class App {
     } else {
       void this.router.navigate(['/settings']);
     }
+  }
+
+  // — Колокольчик «Новые серии» —
+
+  /** Открытие панели = прочтение: счётчик на кнопке обнуляется. */
+  toggleBell(): void {
+    const open = !this.bellOpen();
+    this.bellOpen.set(open);
+    if (open) this.library.markAlertsRead();
+  }
+
+  /** Относительное время сообщения: «только что» / «5 мин» / дата. */
+  alertTime(at: number): string {
+    const min = Math.floor((Date.now() - at) / 60000);
+    if (min < 1) return 'только что';
+    if (min < 60) return `${min} мин назад`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h} ч назад`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return 'вчера';
+    if (d < 7) return `${d} дн. назад`;
+    return new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
   }
 
   minimizeWindow(): void {

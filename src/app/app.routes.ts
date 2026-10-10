@@ -16,6 +16,7 @@ export const routes: Routes = [
   { path: 'favorites', component: LibraryComponent },
   { path: 'later', component: LibraryComponent },
   { path: 'history', component: LibraryComponent },
+  { path: 'follows', component: LibraryComponent },
   { path: 'library', redirectTo: 'favorites', pathMatch: 'full' },
   { path: 'settings', component: SettingsComponent },
   { path: '**', redirectTo: '' },
