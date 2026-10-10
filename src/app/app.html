@@ -72,30 +72,60 @@
       </span>
     </a>
 
-    <nav class="nav">
-      @for (cat of categories(); track cat.id) {
+    <nav class="nav" #navEl>
+      @for (item of navItems(); track item.id; let i = $index) {
         <a
-          [routerLink]="cat.id === 'home' ? '/' : '/category/' + cat.id"
+          [routerLink]="item.link"
           routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: cat.id === 'home' }"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          [class.nav-hidden]="i >= visibleCount()"
         >
-          <app-nav-icon [name]="cat.id" />
-          {{ cat.title }}
+          <app-nav-icon [name]="item.icon" />
+          {{ item.title }}
         </a>
       }
-      <a routerLink="/recs" routerLinkActive="active">
-        <app-nav-icon name="recs" />
-        Рекомендуем
-      </a>
-      <a routerLink="/favorites" routerLinkActive="active">
-        <app-nav-icon name="favorites" />
-        Избранное
-      </a>
-      <a routerLink="/later" routerLinkActive="active">
-        <app-nav-icon name="later" />
-        Смотреть позже
-      </a>
     </nav>
+
+    @if (navOverflow().length) {
+      <div class="nav-more">
+        <button
+          type="button"
+          class="nav-more-btn"
+          [class.active]="navMoreOpen()"
+          (click)="toggleNavMore()"
+          title="Ещё разделы"
+          aria-label="Ещё разделы"
+          [attr.aria-expanded]="navMoreOpen()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
+        </button>
+        @if (navMoreOpen()) {
+          <div class="nav-more-panel">
+            @for (item of navOverflow(); track item.id) {
+              <a
+                [routerLink]="item.link"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: item.exact }"
+                (click)="navMoreOpen.set(false)"
+              >
+                <app-nav-icon [name]="item.icon" />
+                {{ item.title }}
+              </a>
+            }
+          </div>
+        }
+      </div>
+    }
 
     <form class="search" (ngSubmit)="search()" role="search">
       <input
@@ -218,7 +248,7 @@
                 уведомления о новых сериях.
               </p>
             }
-            @for (a of library.alerts(); track a.url + a.at) {
+            @for (a of library.alerts(); track a.at + '|' + a.url + '|' + (a.kind ?? '') + '|' + a.title) {
               <a
                 class="bell-item"
                 [class.unread]="!a.read"

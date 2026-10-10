@@ -76,8 +76,80 @@
   flex-shrink: 0;
 }
 
+/* — «⋯»: невлезающие пункты навигации — */
+.nav-more {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.nav-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.13);
+  }
+}
+
+.nav-more-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 210px;
+  background: #17171f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7);
+  padding: 6px;
+  z-index: 60;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    white-space: nowrap;
+    transition:
+      color 0.14s ease,
+      background 0.14s ease;
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &.active {
+      color: #fff;
+      font-weight: 600;
+      background: rgba(229, 9, 20, 0.28);
+    }
+  }
+}
+
 .logo,
 .nav,
+.nav-more,
 .search,
 .actions,
 .win-controls {
@@ -270,9 +342,18 @@
 .nav {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
+  /* в одну строку: что не влезает — сворачивается в «⋯» (см. measureNav) */
+  flex-wrap: nowrap;
   flex: 1;
   min-width: 0;
+
+  /* невлезающие пункты: вне потока, но остаются измеримыми для measureNav */
+  a.nav-hidden {
+    position: absolute;
+    left: -99999px;
+    top: 0;
+    visibility: hidden;
+  }
 
   a {
     position: relative;

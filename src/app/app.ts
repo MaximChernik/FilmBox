@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from './core/api.service';
@@ -16,6 +16,15 @@ const DENSITY_MAP: Record<string, string> = {
   normal: '160px',
   large: '210px',
 };
+
+/** Пункт навигации в шапке (категории разделов + статичные разделы). */
+interface NavItem {
+  id: string;
+  title: string;
+  link: string;
+  exact: boolean;
+  icon: string;
+}
 
 type AudioCtor = typeof AudioContext;
 
@@ -400,6 +409,31 @@ export class App {
   /** Панель колокольчика: лента «новых серий» отслеживаемых сериалов. */
   readonly bellOpen = signal(false);
 
+  // — Навигация в шапке: невлезающее сворачивается в «⋯» —
+
+  /** Единый список пунктов: категории разделов + статичные разделы. */
+  readonly navItems = computed<NavItem[]>(() => [
+    ...this.categories().map((c) => ({
+      id: c.id,
+      title: c.title,
+      link: c.id === 'home' ? '/' : `/category/${c.id}`,
+      exact: c.id === 'home',
+      icon: c.id,
+    })),
+    { id: 'recs', title: 'Рекомендуем', link: '/recs', exact: false, icon: 'recs' },
+    { id: 'favorites', title: 'Избранное', link: '/favorites', exact: false, icon: 'favorites' },
+    { id: 'later', title: 'Смотреть позже', link: '/later', exact: false, icon: 'later' },
+  ]);
+
+  /** Сколько пунктов помещается в шапке (остальные — под «⋯»). */
+  readonly visibleCount = signal(Number.MAX_SAFE_INTEGER);
+  readonly navOverflow = computed(() =>
+    this.navItems().slice(Math.min(this.visibleCount(), this.navItems().length)),
+  );
+  readonly navMoreOpen = signal(false);
+
+  private readonly navEl = viewChild<ElementRef<HTMLElement>>('navEl');
+
   /**
    * Отдельное PiP-окно: обвязка приложения (шапка, футер, «наверх»)
    * в нём не рендерится вовсе — только страница плеера.
@@ -456,11 +490,26 @@ export class App {
     window.addEventListener('scroll', () => this.showToTop.set(window.scrollY > 600), {
       passive: true,
     });
-    // колокольчик: клик вне панели закрывает её
+    // клики вне панелей (колокольчик, «⋯» навигации) закрывают их
     document.addEventListener('click', (e) => {
-      if (!this.bellOpen()) return;
-      if (!(e.target as HTMLElement | null)?.closest('.bell-wrap')) this.bellOpen.set(false);
+      const t = e.target as HTMLElement | null;
+      if (this.bellOpen() && !t?.closest('.bell-wrap')) this.bellOpen.set(false);
+      if (this.navMoreOpen() && !t?.closest('.nav-more')) this.navMoreOpen.set(false);
     });
+    // навигация: невлезающие пункты уходят под «⋯» — следим за шириной шапки
+    // и за составом пунктов (категории догружаются асинхронно)
+    effect(() => {
+      const el = this.navEl()?.nativeElement;
+      if (!el) return;
+      const ro = new ResizeObserver(() => queueMicrotask(() => this.measureNav()));
+      ro.observe(el);
+      queueMicrotask(() => this.measureNav());
+      this.navItems(); // подписка: новый состав пунктов — новый проход
+      setTimeout(() => this.measureNav(), 0);
+      return () => ro.disconnect();
+    });
+    window.addEventListener('resize', () => this.measureNav());
+    document.fonts?.ready.then(() => this.measureNav()).catch(() => undefined);
     // события автообновления — в колокольчик вместо нативных тостов Windows
     this.api.onUpdateEvent((e) => {
       this.library.pushAlert({
@@ -601,6 +650,39 @@ export class App {
     const open = !this.bellOpen();
     this.bellOpen.set(open);
     if (open) this.library.markAlertsRead();
+  }
+
+  toggleNavMore(): void {
+    this.navMoreOpen.set(!this.navMoreOpen());
+  }
+
+  /**
+   * Считает, сколько пунктов навигации помещается в шапке: скрытые пункты
+   * (класс nav-hidden) лежат вне потока, но остаются измеримыми, поэтому
+   * ширина любого пункта читается всегда. Если не влезает — хвост уходит
+   * под «⋯»; место под кнопку резервируется, чтобы избежать дрожания.
+   */
+  private measureNav(): void {
+    const nav = this.navEl()?.nativeElement;
+    if (!nav) return;
+    const links = Array.from(nav.querySelectorAll<HTMLElement>('a'));
+    if (!links.length) return;
+    const avail = nav.clientWidth;
+    const gap = 4; // = .nav { gap }
+    const moreW = 44; // кнопка «⋯» + зазор (когда она показана)
+    const widths = links.map((l) => l.offsetWidth);
+    const total = widths.length;
+    let count = total;
+    for (let n = total; n >= 1; n--) {
+      let w = 0;
+      for (let i = 0; i < n; i++) w += widths[i] + (i ? gap : 0);
+      if (n < total) w += gap + moreW;
+      if (w <= avail) {
+        count = n;
+        break;
+      }
+    }
+    if (count !== this.visibleCount()) this.visibleCount.set(count);
   }
 
   /** Относительное время сообщения: «только что» / «5 мин» / дата. */
