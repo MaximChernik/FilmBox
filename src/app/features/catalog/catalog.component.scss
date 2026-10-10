@@ -282,7 +282,7 @@
   }
 }
 
-/* Split-������ ������: ? ��������� ���� ���������� ������ �� ����� */
+/* Split-������ ������: ? ��������� ���� ���������� ������ �� ����� */
 .title-row {
   .random-wrap {
     position: relative;
@@ -312,10 +312,12 @@
   .dice-menu {
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
+    /* меню открывается от левого края группы кнопок: кнопка стоит у края
+       окна, привязка правым краем уводила список за пределы экрана */
+    left: 0;
     z-index: 61;
     display: grid;
-    grid-template-columns: repeat(2, minmax(130px, auto));
+    grid-template-columns: repeat(2, minmax(118px, max-content));
     gap: 2px;
     max-height: min(60vh, 420px);
     overflow-y: auto;
