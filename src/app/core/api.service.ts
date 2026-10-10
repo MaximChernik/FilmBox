@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import type { FrameRect, StageCtlOptions, StageCtlResult } from './electron-api';
+import type { FrameRect, StageCtlOptions, StageCtlResult, UpdateEvent } from './electron-api';
 import type {
   CatalogRequest,
   DiagEntry,
@@ -126,6 +126,11 @@ export class ApiService {
 
   onUpdateStatus(cb: (message: string) => void): void {
     this.api?.onUpdateStatus?.(cb);
+  }
+
+  /** События автообновления — колокольчик шапки (вместо нативных тостов). */
+  onUpdateEvent(cb: (e: UpdateEvent) => void): void {
+    this.api?.onUpdateEvent?.(cb);
   }
 
   diagnosticsList(): Promise<DiagEntry[]> {

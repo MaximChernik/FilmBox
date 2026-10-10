@@ -53,10 +53,12 @@ export interface FollowEntry {
  * как сериал перестали отслеживать.
  */
 export interface AlertEntry {
+  /** 'episode' (по умолчанию) — новая серия; 'update' — событие обновления. */
+  kind?: 'episode' | 'update';
   url: string;
   title: string;
   poster?: string;
-  /** что нового: «Сезон 2, Серия 5» */
+  /** что нового: «Сезон 2, Серия 5» / текст про версию */
   text: string;
   at: number;
   read: boolean;

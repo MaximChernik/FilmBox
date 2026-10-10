@@ -461,6 +461,18 @@ export class App {
       if (!this.bellOpen()) return;
       if (!(e.target as HTMLElement | null)?.closest('.bell-wrap')) this.bellOpen.set(false);
     });
+    // события автообновления — в колокольчик вместо нативных тостов Windows
+    this.api.onUpdateEvent((e) => {
+      this.library.pushAlert({
+        kind: 'update',
+        url: '',
+        title: e.version ? `FilmBox ${e.version}` : 'FilmBox',
+        text:
+          e.kind === 'available'
+            ? 'Доступна новая версия — загружаю в фоне…'
+            : 'Обновление загружено — установится при закрытии FilmBox.',
+      });
+    });
     // hash navigations are same-document — browser scroll restoration could
     // put an old position back after our own reset
     try {

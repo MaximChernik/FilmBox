@@ -16,6 +16,7 @@ const allowedChannels = new Set([
   'app:check-update',
   'update:progress',
   'update:status',
+  'update:event',
   'diagnostics:list',
   'diagnostics:clear',
   'state:set',
@@ -69,6 +70,17 @@ contextBridge.exposeInMainWorld('api', {
   },
   onUpdateStatus: (cb: (message: string) => void): void => {
     ipcRenderer.on('update:status', (_e, m) => cb(String(m)));
+  },
+  /** События автообновления («доступна версия» / «загружено») — колокольчик. */
+  onUpdateEvent: (
+    cb: (e: { kind: 'available' | 'downloaded'; version: string }) => void,
+  ): void => {
+    ipcRenderer.on('update:event', (_e, payload) => {
+      const p = (payload ?? {}) as { kind?: unknown; version?: unknown };
+      if (p.kind === 'available' || p.kind === 'downloaded') {
+        cb({ kind: p.kind, version: String(p.version ?? '') });
+      }
+    });
   },
   diagnosticsList: () => invoke('diagnostics:list'),
   diagnosticsClear: () => invoke('diagnostics:clear'),

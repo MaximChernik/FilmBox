@@ -61,6 +61,13 @@ export interface StageCtlOptions {
   series?: boolean;
 }
 
+/** Событие автообновления: «доступна версия» или «загружено и готово». */
+export interface UpdateEvent {
+  kind: 'available' | 'downloaded';
+  /** версия из ленты релизов (пусто, если главный процесс её не прислал) */
+  version: string;
+}
+
 export interface ElectronApi {
   listSources(): Promise<SourceInfo[]>;
   loadCatalog(req: CatalogRequest): Promise<PagedResult>;
@@ -95,6 +102,8 @@ export interface ElectronApi {
   onUpdateProgress?(cb: (pct: number) => void): void;
   /** Итоги проверки обновления («последняя версия», «ошибка» и т.п.). */
   onUpdateStatus?(cb: (message: string) => void): void;
+  /** События автообновления — пишутся в колокольчик шапки. */
+  onUpdateEvent?(cb: (e: UpdateEvent) => void): void;
   /** Последние сбои источников (кольцевой буфер главного процесса). */
   diagnosticsList?(): Promise<DiagEntry[]>;
   diagnosticsClear?(): Promise<void>;

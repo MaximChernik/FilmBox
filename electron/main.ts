@@ -293,7 +293,7 @@ app.whenReady().then(() => {
       // notifications unsupported — ignore
     }
   };
-  initAutoUpdater(notify);
+  initAutoUpdater();
   // «Слежение за сериалами»: renderer зовёт при выходе новых серий
   ipcMain.handle('app:notify', (_e, text: unknown) => {
     if (typeof text === 'string' && text.trim()) notify(text.slice(0, 300));

@@ -9,8 +9,12 @@ import { app, BrowserWindow, ipcMain } from 'electron';
  * portable используйте ручной переустановок файла или NSIS-установщик.
  *
  * В dev-режиме (app.isPackaged === false) обновление не запускается.
+ *
+ * Важно: события обновления уходят в рендерер каналом `update:event` — там
+ * их пишет колокольчик шапки. Нативные тосты Windows для обновлений не
+ * шлём (единственный системный канал `app:notify` — «новые серии»).
  */
-export function initAutoUpdater(notify: (text: string) => void): void {
+export function initAutoUpdater(): void {
   const load = async () => {
     const mod = await import('electron-updater');
     return mod.autoUpdater;
@@ -44,14 +48,8 @@ export function initAutoUpdater(notify: (text: string) => void): void {
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.logger = console;
 
-    autoUpdater.on('update-available', () => {
-      notify('Доступна новая версия — загружаю в фоне…');
-    });
     autoUpdater.on('error', (err: Error) => {
       console.error('autoUpdater error:', err?.message ?? err);
-    });
-    autoUpdater.on('update-downloaded', () => {
-      notify('Обновление готово — установится при закрытии FilmBox.');
     });
 
     // Прогресс загрузки шлём в рендерер (полоска обновления в настройках);
@@ -85,6 +83,19 @@ export function initAutoUpdater(notify: (text: string) => void): void {
       sendStatus('Обновление загружено — установится при закрытии FilmBox.'),
     );
     autoUpdater.on('error', () => sendStatus('Не удалось проверить обновления — попробуйте позже.'));
+
+    // события обновления → колокольчик шапки (вместо нативных тостов Windows)
+    const sendEvent = (kind: 'available' | 'downloaded', version?: string): void => {
+      for (const w of BrowserWindow.getAllWindows()) {
+        w.webContents.send('update:event', { kind, version: version ?? '' });
+      }
+    };
+    autoUpdater.on('update-available', (info: { version?: string }) =>
+      sendEvent('available', info?.version),
+    );
+    autoUpdater.on('update-downloaded', (info: { version?: string }) =>
+      sendEvent('downloaded', info?.version),
+    );
 
     void autoUpdater.checkForUpdates().catch(() => undefined);
   });

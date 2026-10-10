@@ -222,11 +222,13 @@
               <a
                 class="bell-item"
                 [class.unread]="!a.read"
-                [routerLink]="['/details']"
-                [queryParams]="{ u: a.url }"
+                [routerLink]="a.kind === 'update' ? ['/settings'] : ['/details']"
+                [queryParams]="a.kind === 'update' ? null : { u: a.url }"
                 (click)="bellOpen.set(false)"
               >
-                @if (a.poster) {
+                @if (a.kind === 'update') {
+                  <span class="bell-poster upd" aria-hidden="true">↑</span>
+                } @else if (a.poster) {
                   <img class="bell-poster" [src]="a.poster" alt="" loading="lazy" />
                 } @else {
                   <span class="bell-poster ph" aria-hidden="true"><app-poster-ph /></span>
