@@ -156,11 +156,12 @@ export class SettingsComponent {
           this.updateProgress.set(pct);
         } else if (pct >= 100) {
           this.updateProgress.set(100);
-          this.updateMessage.set('Обновление загружено — установится при закрытии FilmBox.');
         } else {
           this.updateProgress.set(null);
         }
       });
+      // итоги проверки из главного процесса — сообщение не висит вечно
+      this.api.onUpdateStatus((message) => this.updateMessage.set(message));
     }
   }
 

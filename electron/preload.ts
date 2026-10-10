@@ -15,6 +15,7 @@ const allowedChannels = new Set([
   'app:version',
   'app:check-update',
   'update:progress',
+  'update:status',
   'state:set',
   'state:getSync',
   'app:farewell',
@@ -60,6 +61,9 @@ contextBridge.exposeInMainWorld('api', {
   checkUpdate: () => invoke('app:check-update') as Promise<{ status: string; message: string }>,
   onUpdateProgress: (cb: (pct: number) => void): void => {
     ipcRenderer.on('update:progress', (_e, v) => cb(Number(v)));
+  },
+  onUpdateStatus: (cb: (message: string) => void): void => {
+    ipcRenderer.on('update:status', (_e, m) => cb(String(m)));
   },
   stateGetSync: (key: string): string | null => {
     try {

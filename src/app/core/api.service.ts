@@ -118,6 +118,10 @@ export class ApiService {
     this.api?.onUpdateProgress?.(cb);
   }
 
+  onUpdateStatus(cb: (message: string) => void): void {
+    this.api?.onUpdateStatus?.(cb);
+  }
+
   /** Subscribe to the pre-close farewell event (no-op in a plain browser). */
   onFarewell(cb: () => void): void {
     this.api?.onFarewell?.(cb);

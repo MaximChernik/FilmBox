@@ -22,8 +22,13 @@ export function initAutoUpdater(notify: (text: string) => void): void {
       if (!app.isPackaged) {
         return { status: 'dev', message: 'Обновления доступны только в установленной сборке.' };
       }
-      await autoUpdater.checkForUpdates();
-      return { status: 'ok', message: 'Проверка обновлений запущена…' };
+      // checkForUpdates резолвится результатом — возвращаем конкретный итог,
+      // а не «проверка запущена…» (иначе сообщение висит вечно)
+      const result = await autoUpdater.checkForUpdates();
+      if (!result || !result.isUpdateAvailable) {
+        return { status: 'none', message: `У вас последняя версия (${app.getVersion()}).` };
+      }
+      return { status: 'ok', message: 'Новая версия найдена — загружаю в фоне…' };
     } catch (err) {
       return {
         status: 'error',
@@ -60,6 +65,26 @@ export function initAutoUpdater(notify: (text: string) => void): void {
     autoUpdater.on('update-cancelled', () => sendProgress(-1));
     autoUpdater.on('error', () => sendProgress(-1));
     autoUpdater.on('update-downloaded', () => sendProgress(100));
+
+    // Итоги проверки тоже шлём в рендерер — сообщение в настройках
+    // обновляется и не висит «Проверка запущена…» вечно
+    const sendStatus = (message: string): void => {
+      for (const w of BrowserWindow.getAllWindows()) {
+        w.webContents.send('update:status', message);
+      }
+    };
+    autoUpdater.on('checking-for-update', () => sendStatus('Проверяем…'));
+    autoUpdater.on('update-not-available', () =>
+      sendStatus(`У вас последняя версия (${app.getVersion()}).`),
+    );
+    autoUpdater.on('update-available', (info: { version?: string }) =>
+      sendStatus(`Новая версия ${info?.version ?? ''} — загружаю в фоне…`),
+    );
+    autoUpdater.on('update-cancelled', () => sendStatus('Загрузка обновления отменена.'));
+    autoUpdater.on('update-downloaded', () =>
+      sendStatus('Обновление загружено — установится при закрытии FilmBox.'),
+    );
+    autoUpdater.on('error', () => sendStatus('Не удалось проверить обновления — попробуйте позже.'));
 
     void autoUpdater.checkForUpdates().catch(() => undefined);
   });
