@@ -11,12 +11,23 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 const WEIGHT_LATER = 3;
 const WEIGHT_FAVORITE = 2;
 const WEIGHT_HISTORY = 1;
-/** History entries newer than this get double weight. */
-const RECENT_HISTORY_MS = 14 * 24 * 60 * 60 * 1000;
-/** How many recommendations are shown before "load more". */
-const PAGE_SIZE = 24;
-/** Genres are enriched (details fetched) for at most this many entries. */
+/** Период полураспада влияния истории: свежие просмотры значат больше. */
+const HISTORY_DECAY_DAYS = 30;
+/**
+ * Полосы качества: чем выше порог «подавления», тем злее отбрасываем
+ * мусорные низкорейтинговые карточки перед скорингом.
+ */
+const RATING_SUPPRESS_BELOW = 6.5;
+const RATING_SUPPRESS_FACTOR = 0.35;
+/**
+ * Буст «хорошего профиля»: когда у подборки есть жанровая опора, чёткие
+ * совпадения прижимаются к верху списка сильнее, чем их тянет сырая формула.
+ */
+const PROFILE_SHARPEN = 1.6;
+/** Сколько записей библиотеки обогащается жанрами через детали. */
 const ENRICH_LIMIT = 15;
+/** Сколько рекомендаций показывается перед «показать ещё». */
+const PAGE_SIZE = 24;
 /**
  * Максимальное время ожидания одного combo «источник × раздел».
  * Подборка агрегирует каталоги ВСЕХ активных источников — без
@@ -32,6 +43,8 @@ const DEAD_SOURCE_MS = 60_000;
 interface ProfileEntry {
   item: MediaSummary;
   weight: number;
+  /** Угасающий вес: свежие просмотры давят на профиль сильнее старых. */
+  decay: number;
 }
 
 interface Profile {
@@ -123,6 +136,8 @@ export class RecsComponent {
   private buildToken = 0;
 
   private profile: Profile | null = null;
+  /** Профиль вкуса собран на узком костяке жанров — можно отточить скоринг. */
+  private sharpenProfile = false;
   private excludedUrls = new Set<string>();
   private seenUrls = new Set<string>();
   private seenTitles = new Set<string>();
@@ -158,14 +173,18 @@ export class RecsComponent {
   private collectEntries(): ProfileEntry[] {
     const now = Date.now();
     const entries: ProfileEntry[] = [];
-    for (const item of this.library.later()) entries.push({ item, weight: WEIGHT_LATER });
-    for (const item of this.library.favorites()) entries.push({ item, weight: WEIGHT_FAVORITE });
+    for (const item of this.library.later()) {
+      entries.push({ item, weight: WEIGHT_LATER, decay: 1 });
+    }
+    for (const item of this.library.favorites()) {
+      entries.push({ item, weight: WEIGHT_FAVORITE, decay: 1 });
+    }
     for (const entry of this.library.history()) {
-      const recent = now - entry.watchedAt < RECENT_HISTORY_MS;
-      entries.push({
-        item: entry.item,
-        weight: WEIGHT_HISTORY * (recent ? 2 : 1),
-      });
+      // угасание по 30-дневному полураспаду: вчерашний просмотр весит почти
+      // как свежий, а годовалый — почти ничто
+      const ageDays = (now - entry.watchedAt) / (24 * 60 * 60 * 1000);
+      const decay = Math.pow(0.5, ageDays / HISTORY_DECAY_DAYS);
+      entries.push({ item: entry.item, weight: WEIGHT_HISTORY, decay });
     }
     return entries;
   }
@@ -187,21 +206,36 @@ export class RecsComponent {
     for (const entry of entries) {
       const details = enriched.get(entry.item.url);
       const genres = entry.item.genres?.length ? entry.item.genres : (details?.genres ?? []);
+      const w = entry.weight * entry.decay;
       for (const genre of genres) {
         const key = normGenre(genre);
         if (!key) continue;
-        profile.genre.set(key, (profile.genre.get(key) ?? 0) + entry.weight);
+        profile.genre.set(key, (profile.genre.get(key) ?? 0) + w);
       }
       if (entry.item.kind) {
-        profile.kind.set(entry.item.kind, (profile.kind.get(entry.item.kind) ?? 0) + entry.weight);
+        profile.kind.set(entry.item.kind, (profile.kind.get(entry.item.kind) ?? 0) + w);
       }
       const year = Number(entry.item.year);
       if (Number.isFinite(year) && year > 1900) {
-        profile.years.push({ year, weight: entry.weight });
+        profile.years.push({ year, weight: w });
       }
-      profile.total += entry.weight;
+      profile.total += w;
     }
     return profile;
+  }
+
+  /**
+   * Чёткость профиля: сколько жанров реально держится на весах библиотеки.
+   * `true` — есть узкий костяк вкуса (2–5 доминантных жанров), которым стоит
+   * верить; `false` — либо данных мало, либо вкусы размазаны, и усиление
+   * только размазало бы подборку.
+   */
+  private hasSharpProfile(profile: Profile): boolean {
+    const weights = [...profile.genre.values()].sort((a, b) => b - a);
+    if (weights.length < 2 || weights.length > 5) return false;
+    const top = weights.slice(0, 2).reduce((sum, w) => sum + w, 0);
+    const all = weights.reduce((sum, w) => sum + w, 0);
+    return all > 0 && top / all > 0.4;
   }
 
   /**
@@ -210,8 +244,11 @@ export class RecsComponent {
    */
   private scoreCandidate(item: MediaSummary, profile: Profile): number {
     let score = 0;
+    let genreHits = 0;
     for (const genre of item.genres ?? []) {
-      score += (profile.genre.get(normGenre(genre)) ?? 0) * 2;
+      const weight = profile.genre.get(normGenre(genre)) ?? 0;
+      genreHits += weight;
+      score += weight * 2;
     }
     if (item.kind) score += profile.kind.get(item.kind) ?? 0;
     const year = Number(item.year);
@@ -223,7 +260,19 @@ export class RecsComponent {
         else if (delta === 2) score += y.weight * 0.3;
       }
     }
-    if (item.rating) score += Math.min(item.rating, 10) / 10;
+    // рейтинг как мягкое качество: карточки ниже ~6.5 прижимаются вниз, а
+    // не конкурируют с действительно подходящими по вкусу
+    const rating = item.rating;
+    if (rating !== undefined && Number.isFinite(rating)) {
+      const r = Math.min(Math.max(rating, 0), 10);
+      const factor = r < RATING_SUPPRESS_BELOW ? RATING_SUPPRESS_FACTOR : 1;
+      score += (r / 10) * factor;
+    }
+    // когда профиль чёткий, усиливаем реальные совпадения — «жанровая опора»
+    // прижимает точные попадания к верху
+    if (genreHits > 0 && this.sharpenProfile) {
+      score *= PROFILE_SHARPEN;
+    }
     return score;
   }
 
@@ -242,16 +291,19 @@ export class RecsComponent {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([genre]) => genre);
-    const count = profile.total;
+    const count = Math.round(profile.total);
     const unit = pluralRu(count, 'запись', 'записи', 'записей');
     if (!topGenres.length) {
       return `По вашей библиотеке (${count} ${unit}) жанров пока не прослеживается — сортируем кандидатов по рейтингу.`;
     }
+    const sharpen = this.sharpenProfile
+      ? `Профиль чёткий (2–5 доминантных жанров) — совпадения усилены ×${PROFILE_SHARPEN}. `
+      : 'Вкусы размазаны по многим жанрам — усиление не применяли. ';
     return (
-      `Формула: жанры (${topGenres.join(', ')}), тип и близость года. ` +
-      `Веса: «Смотреть позже» ×${WEIGHT_LATER}, избранное ×${WEIGHT_FAVORITE}, ` +
-      `история ×${WEIGHT_HISTORY} (за последние 14 дней ×2) — всего ${count} ${unit}. ` +
-      `Кандидаты — каталоги активных источников, совпадения идут первыми.`
+      `${sharpen}Опора: ${topGenres.join(', ')}. ` +
+      `Веса: «Смотреть позже» ×${WEIGHT_LATER}, избранное ×${WEIGHT_FAVORITE}, история ×${WEIGHT_HISTORY} ` +
+      `с угасанием по ${HISTORY_DECAY_DAYS}-дневному полураспаду — всего ${count} ${unit}. ` +
+      `Кандидаты — каталоги активных источников, низкорейтинговые карточки прижаты вниз.`
     );
   }
 
@@ -337,6 +389,7 @@ export class RecsComponent {
       const profile = await this.buildProfile(entries);
       if (token !== this.buildToken) return;
       this.profile = profile;
+      this.sharpenProfile = this.hasSharpProfile(profile);
       this.excludedUrls = new Set(entries.map((e) => e.item.url));
       this.seenUrls = new Set(this.excludedUrls);
       this.seenTitles = new Set<string>();
