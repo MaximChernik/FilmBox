@@ -12,6 +12,7 @@ import type { MediaDetails, MediaSummary, PlayerTab, SourceInfo } from '../../co
 import { PosterPhComponent } from '../../shared/poster-ph.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { MediaCardComponent } from '../../shared/media-card/media-card.component';
+import { toTrailerEmbed } from '../../shared/trailer-embed';
 import { effectiveYear, normalizeTitle } from '../catalog/catalog-items.model';
 
 /**
@@ -174,6 +175,17 @@ export class DetailsComponent {
   readonly isLater = computed(() => {
     const url = this.details()?.url;
     return url ? this.library.isLater(url) : false;
+  });
+  /** Слежу за новыми сериями этого сериала. */
+  readonly isFollow = computed(() => {
+    const url = this.details()?.url;
+    return url ? this.library.isFollow(url) : false;
+  });
+  /** Кнопка «Следить» имеет смысл только для сериалов. */
+  readonly canFollow = computed(() => {
+    const d = this.details();
+    if (!d) return false;
+    return d.kind === 'serial' || (d.kind === 'unknown' && !!(d.lastEpisode || d.seasonsCount));
   });
   readonly progress = computed(() => {
     const url = this.activeUrl();
@@ -403,6 +415,13 @@ export class DetailsComponent {
     this.library.toggleLater(this.library.summary(details));
   }
 
+  /** Слежение за новыми сериями: кнопка есть только у сериалов. */
+  toggleFollow(): void {
+    const details = this.details();
+    if (!details) return;
+    this.library.toggleFollow(this.library.summary(details));
+  }
+
   openOnSite(): void {
     const url = this.activeUrl();
     if (url) void this.api.openExternal(url);
@@ -481,31 +500,5 @@ export class DetailsComponent {
     if (!pick) return null;
     const id = pick.url.match(/\/video\/([0-9a-f]{32})/i)?.[1];
     return id ? `https://rutube.ru/play/embed/${id}/` : null;
-  }
-}
-
-/**
- * URL вкладки «Трейлер» → рабочий embed для iframe: YouTube — в nocookie
- * (Referer для него подставляет main.ts), RuTube — в play/embed; на всё
- * остальное полагаться не стоит — лучше поискать трейлер заново.
- */
-function toTrailerEmbed(url: string): string | null {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    if (host.endsWith('rutube.ru')) {
-      if (u.pathname.includes('/play/embed/')) return url;
-      const rt = u.pathname.match(/\/video\/([0-9a-f]{32})/i);
-      return rt ? `https://rutube.ru/play/embed/${rt[1]}/` : null;
-    }
-    let id = '';
-    if (host.endsWith('youtu.be')) id = u.pathname.split('/')[1] ?? '';
-    else {
-      id = u.pathname.match(/\/(?:embed|shorts|live|v)\/([\w-]{11})(?:\/|$)/)?.[1] ?? '';
-      if (!id) id = u.searchParams.get('v') ?? '';
-    }
-    return /^[\w-]{11}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-  } catch {
-    return null;
   }
 }

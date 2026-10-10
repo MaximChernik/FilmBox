@@ -86,6 +86,19 @@
       0 0 0 1px rgba(229, 9, 20, 0.4),
       0 10px 34px rgba(229, 9, 20, 0.22);
   }
+
+  /* Тизер-трейлер: молчаливый iframe поверх постера (появляется после паузы
+     наведения, гаснет вместе с уходом указателя — см. media-card.ts) */
+  .teaser {
+    position: absolute;
+    inset: 0;
+    z-index: 1; /* над постером, под бейджами (z-index 2) */
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+    pointer-events: none; /* клик остаётся у карточки — открытие деталей */
+  }
 }
 
 @keyframes poster-shimmer {

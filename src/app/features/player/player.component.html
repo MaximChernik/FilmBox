@@ -1,4 +1,4 @@
-<section class="watch" [class.theater]="theater()" [class.pip]="isPip()">
+<section class="watch" [class.theater]="theater()" [class.cinema]="cinema()" [class.pip]="isPip()">
   <div class="top">
     @if (isPip()) {
       <!-- PiP-окно: только drag-плашка и крестик, никакой обвязки -->
@@ -176,6 +176,24 @@
             <path d="M2 5v14c0 .55.45 1 1 1h18c.55 0 1-.45 1-1V5H2zm14 9H8v-5h8v5z" />
           </svg>
         </button>
+        <button
+          type="button"
+          class="t-btn"
+          (click)="toggleCinema()"
+          [class.on]="cinema()"
+          title="Режим «Кинотеатр» (C) — всё гаснет, остаётся кадр"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
         <button type="button" class="t-btn" (click)="toggleFullscreen()" title="Полный экран">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path
@@ -271,6 +289,8 @@
     <span class="key">F</span> во весь экран
     <span class="sep">·</span>
     <span class="key">T</span> театр
+    <span class="sep">·</span>
+    <span class="key">C</span> кинотеатр
     <span class="sep">·</span>
     <span class="key">N</span> следующая серия
   </div>

@@ -79,6 +79,26 @@
   }
 }
 
+/* «Кинотеатр»: шапка/подвал приложения гаснут классом cinema-mode на <html>,
+   здесь — крупная сцена и обвязка в духе fullscreen (рамки/тени убраны) */
+.watch.cinema {
+  max-width: min(1920px, 100%);
+
+  .top,
+  .hotkeys {
+    display: none;
+  }
+
+  .stage {
+    aspect-ratio: auto;
+    height: calc(100dvh - 120px);
+    min-height: 360px;
+    border-radius: 8px;
+    border: none;
+    box-shadow: none;
+  }
+}
+
 .titles {
   flex: 1;
   min-width: 0;

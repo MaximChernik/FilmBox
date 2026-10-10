@@ -88,6 +88,8 @@ export interface ElectronApi {
   closePipWindow?(): void;
   onPipWindowClosed?(cb: () => void): void;
   getVersion(): Promise<string>;
+  /** Системное уведомление Windows (слежение за новыми сериями). */
+  notify?(text: string): Promise<void>;
   checkUpdate?(): Promise<{ status: string; message: string }>;
   /** Фоновая загрузка обновления: pct — проценты (100 = готово, -1 = отмена/ошибка). */
   onUpdateProgress?(cb: (pct: number) => void): void;

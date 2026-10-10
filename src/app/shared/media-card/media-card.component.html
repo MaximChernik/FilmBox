@@ -7,7 +7,12 @@
   role="link"
   [attr.aria-label]="item().title"
 >
-  <div class="poster" [class.img-ready]="imgReady()">
+  <div
+    class="poster"
+    [class.img-ready]="imgReady()"
+    (mouseenter)="onPosterEnter()"
+    (mouseleave)="onPosterLeave()"
+  >
     @if (item().poster && !posterBroken()) {
       <img
         [src]="item().poster"
@@ -113,6 +118,17 @@
         }
       </div>
     </div>
+    @if (teaserSrc(); as src) {
+      <!-- Тизер-трейлер: молчаливый iframe поверх постера, пока указатель на карточке -->
+      <iframe
+        class="teaser"
+        [src]="src"
+        title="Тизер"
+        tabindex="-1"
+        allow="autoplay"
+        aria-hidden="true"
+      ></iframe>
+    }
   </div>
   <h3 class="title" appTitleTip [appTitleTip]="item().title">{{ item().title }}</h3>
   <div class="meta">

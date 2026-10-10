@@ -109,6 +109,11 @@ export class ApiService {
     return this.bridge().getVersion();
   }
 
+  /** Системное уведомление Windows (слежение за новыми сериями). */
+  notify(text: string): Promise<void> {
+    return this.bridge().notify?.(text) ?? Promise.resolve();
+  }
+
   checkUpdate(): Promise<{ status: string; message: string }> {
     if (!this.api?.checkUpdate)
       return Promise.resolve({ status: 'dev', message: 'Недоступно в браузере.' });

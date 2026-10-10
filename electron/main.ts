@@ -286,12 +286,17 @@ app.whenReady().then(() => {
 
   createRegistry(ipcMain, shell);
   // windows Notification shows even when the app is minimized/background
-  initAutoUpdater((text) => {
+  const notify = (text: string): void => {
     try {
       new Notification({ title: 'FilmBox', body: text }).show();
     } catch {
       // notifications unsupported — ignore
     }
+  };
+  initAutoUpdater(notify);
+  // «Слежение за сериалами»: renderer зовёт при выходе новых серий
+  ipcMain.handle('app:notify', (_e, text: unknown) => {
+    if (typeof text === 'string' && text.trim()) notify(text.slice(0, 300));
   });
   createWindow();
 

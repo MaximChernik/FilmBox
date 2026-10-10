@@ -23,6 +23,7 @@ import {
   sortItems,
   sortNewest,
   type SortId,
+  yearNum,
 } from './catalog-items.model';
 
 /** Снимок вида раздела в history.state его записи — для «назад» без потерь. */
@@ -102,10 +103,23 @@ export class CatalogComponent {
   readonly hasMore = signal(false);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly title = signal('');
   readonly categories = signal<Category[]>([]);
   readonly categoryId = signal('home');
   readonly searchQuery = signal('');
+
+  /**
+   * Заголовок раздела — реактивный: категории приходят из `sources:list`
+   * асинхронно, поэтому императивный `title.set()` в openCategory()
+   * оставлял старый текст (переход с «Главной» в другой раздел показывал
+   * прежний заголовок). computed пересчитывается сам, когда чипсы догрузились.
+   */
+  readonly title = computed(() => {
+    if (this.isSearch) {
+      const q = this.searchQuery();
+      return q ? `Поиск: «${q}»` : 'Поиск';
+    }
+    return this.categories().find((c) => c.id === this.categoryId())?.title ?? 'Каталог';
+  });
 
   readonly filterKind = signal('');
   readonly filterGenre = signal('');
@@ -158,7 +172,11 @@ export class CatalogComponent {
     const mode = this.sort();
     // «Новинки» sorts by production year, then by the source's update date
     if (mode === 'default' && !this.isSearch && this.categoryId() === 'new') {
-      return sortNewest(items);
+      // Источники кладут в «Новинки» и старые перезаливы (перечислены заново).
+      // Карточки с известным годом старше двух лет отсекаем — новые релизы
+      // сортируются по году, безгодовые всплывут после гидратации года.
+      const cutoff = new Date().getFullYear() - 2;
+      return sortNewest(items.filter((item) => (yearNum(item) ?? cutoff) >= cutoff));
     }
     return sortItems(items, mode);
   });
@@ -401,7 +419,36 @@ export class CatalogComponent {
   ];
 
   onSort(event: Event): void {
-    this.sort.set((event.target as HTMLSelectElement).value as SortId);
+    const mode = (event.target as HTMLSelectElement).value as SortId;
+    this.sort.set(mode);
+    void this.deepenForSort();
+  }
+
+  /** Токен отмены фонового углубления пула при смене сортировки/раздела. */
+  private deepenSeq = 0;
+
+  /**
+   * Сортировка работает по загруженному пулу, а изначально это одна страница
+   * с каждого источника — «Название: А-Я» на такой выборке бессмысленно.
+   * При выборе сортировки в фоне дотягиваем несколько страниц (с отменой,
+   * если сортировку сменили или раздел ушёл), чтобы порядок решался по
+   * большему пулу, а не по первому экрану.
+   */
+  private async deepenForSort(): Promise<void> {
+    const seq = ++this.deepenSeq;
+    if (this.sort() === 'default' || this.isSearch) return;
+    for (let round = 0, waited = 0; round < 6; round++) {
+      if (seq !== this.deepenSeq || !this.hasMore() || this.error()) return;
+      if (this.loading()) {
+        // идёт чужая загрузка — ждём её конца, не сжигая раунды вхолостую
+        if (++waited > 100) return; // ~15 с тишины — выходим, не зависаем
+        await new Promise((r) => setTimeout(r, 150));
+        round--;
+        continue;
+      }
+      waited = 0;
+      await this.loadMore();
+    }
   }
 
   /**
@@ -432,6 +479,39 @@ export class CatalogComponent {
         }),
       );
       if (!this.filterGenre()) return; // фильтр сняли — трафик не тратим
+    }
+  }
+
+  /** url'ы, по которым год уже запрашивали (даже если источник его не дал). */
+  private readonly yearsTried = new Set<string>();
+
+  /**
+   * В «Новинках» карточки часто идут без года — сортировка по году для них
+   * бесполезна, а фильтр старых перезаливов их пропускает. Гидратируем год
+   * деталями (кэш ApiService, 60 с): сетка сразу показывает то, что уже
+   * известно, и уточняется по мере ответов.
+   */
+  private async hydrateYears(): Promise<void> {
+    const missing = this.items()
+      .filter((item) => !item.year && !this.yearsTried.has(item.url))
+      .slice(0, 40);
+    if (!missing.length) return;
+    for (const item of missing) this.yearsTried.add(item.url);
+    for (let i = 0; i < missing.length; i += 8) {
+      await Promise.allSettled(
+        missing.slice(i, i + 8).map(async (item) => {
+          try {
+            const details = await this.api.loadDetails(item.url);
+            if (!details.year) return;
+            this.items.update((list) =>
+              list.map((it) => (it.url === item.url ? { ...it, year: details.year } : it)),
+            );
+          } catch {
+            // без года карточка всплывёт внизу — честный итог
+          }
+        }),
+      );
+      if (this.categoryId() !== 'new' || this.sort() !== 'default') return;
     }
   }
 
@@ -578,7 +658,10 @@ export class CatalogComponent {
     const saveSub = this.router.events
       .pipe(filter((e): e is NavigationStart => e instanceof NavigationStart))
       .subscribe(() => this.saveState());
-    destroyRef.onDestroy(() => saveSub.unsubscribe());
+    destroyRef.onDestroy(() => {
+      saveSub.unsubscribe();
+      this.deepenSeq++; // раздел ушёл — фоновое углубление пула отменяем
+    });
 
     // Reload the catalog when the set of enabled sources changes in settings,
     // or when the user reorders sources by dragging them.
@@ -601,6 +684,13 @@ export class CatalogComponent {
     effect(() => {
       if (!this.filterGenre()) return;
       void this.hydrateGenres();
+    });
+
+    // Год для «Новинок» (сортировка/фильтр старых перезаливов по нему);
+    // чтение items() привязывает эффект и к новым страницам.
+    effect(() => {
+      if (this.isSearch || this.categoryId() !== 'new' || this.sort() !== 'default') return;
+      void this.hydrateYears();
     });
   }
 
@@ -658,7 +748,6 @@ export class CatalogComponent {
     this.items.set(saved.items);
     this.page.set(saved.page ?? 1);
     this.hasMore.set(saved.hasMore ?? false);
-    this.title.set(saved.title ?? '');
     this.categoryId.set(saved.categoryId ?? 'home');
     this.searchQuery.set(saved.searchQuery ?? '');
     this.restoredKey = key;
@@ -732,18 +821,18 @@ export class CatalogComponent {
   }
 
   private async openCategory(id: string): Promise<void> {
+    this.deepenSeq++; // раздел сменился — фоновое углубление пула отменяем
     this.categoryId.set(id);
     this.resetFilters(false);
-    const title = this.categories().find((c) => c.id === id)?.title ?? 'Каталог';
-    this.title.set(title);
+    // заголовок — реактивный computed от categoryId/categories, см. поле title
     await this.fetch(1, id, false);
   }
 
   private async runSearch(q: string): Promise<void> {
+    this.deepenSeq++;
     const query = q.trim();
     this.searchQuery.set(query);
     this.resetFilters(false);
-    this.title.set(query ? `Поиск: «${query}»` : 'Поиск');
     this.items.set([]);
     this.hasMore.set(false);
     if (!query) return;

@@ -641,6 +641,28 @@ html.pip-window body::after {
   box-shadow: none;
 }
 
+/* «Кинотеатр» из плеера (кнопка/хоткей C): гасим обвязку приложения —
+   шапку, подвал, кнопку «наверх», баннер окружения; кадр на чёрном фоне */
+html.cinema-mode {
+  .topbar,
+  .footer,
+  .to-top,
+  .env-banner {
+    display: none !important;
+  }
+
+  body {
+    background: #000;
+    overflow: hidden;
+  }
+
+  .page {
+    /* компонентный `.page[_ngcontent]` специфичнее — гасим !important */
+    padding: 0 !important;
+    height: 100dvh;
+  }
+}
+
 /* Кастомный тултип полного названия (TitleTipDirective): узел живёт в body,
    поэтому всплывает поверх сетки и не обрезается overflow'ем карточек */
 .title-tip {

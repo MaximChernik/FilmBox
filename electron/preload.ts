@@ -27,6 +27,7 @@ const allowedChannels = new Set([
   'window:is-maximized',
   'window:maximized',
   'app:pickFolder',
+  'app:notify',
   'app:pip-open',
   'app:pip-close',
   'app:pip-window-closed',
@@ -60,6 +61,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('app:pip-window-closed', () => cb());
   },
   getVersion: () => invoke('app:version'),
+  /** Системное уведомление Windows (слежение за сериалами). */
+  notify: (text: string) => invoke('app:notify', text) as Promise<void>,
   checkUpdate: () => invoke('app:check-update') as Promise<{ status: string; message: string }>,
   onUpdateProgress: (cb: (pct: number) => void): void => {
     ipcRenderer.on('update:progress', (_e, v) => cb(Number(v)));

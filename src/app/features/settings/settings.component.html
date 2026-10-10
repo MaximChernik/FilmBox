@@ -205,6 +205,20 @@
         <span class="knob"></span>
       </button>
     </div>
+    <div class="row">
+      <span class="name">Тизер-трейлер при наведении на постер</span>
+      <button
+        type="button"
+        class="switch"
+        role="switch"
+        [attr.aria-checked]="settings.settings().teasers"
+        [class.on]="settings.settings().teasers"
+        aria-label="Тизер-трейлер при наведении на постер"
+        (click)="toggleTeasers()"
+      >
+        <span class="knob"></span>
+      </button>
+    </div>
   </section>
 
   <section class="card">

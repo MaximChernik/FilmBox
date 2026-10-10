@@ -229,6 +229,10 @@ export class SettingsComponent {
     this.settings.update({ ambient: !this.settings.get().ambient });
   }
 
+  toggleTeasers(): void {
+    this.settings.update({ teasers: !this.settings.get().teasers });
+  }
+
   /** Записываем локальный путь к видеотеке из текстового поля (по change). */
   onLocalPathChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value.trim();

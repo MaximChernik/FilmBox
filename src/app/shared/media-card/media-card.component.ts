@@ -2,17 +2,22 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { ApiService } from '../../core/api.service';
 import { LibraryService } from '../../core/library.service';
 import { PosterFlyService } from '../../core/poster-fly.service';
 import type { MediaSummary } from '../../core/models';
+import { SettingsService } from '../../core/settings.service';
 import { TitleTipDirective } from '../title-tip.directive';
 import { PosterPhComponent } from '../poster-ph.component';
+import { mutedAutoplay, teaserUrlFromPlayers } from '../trailer-embed';
 
 /** «1 сезон», «2 сезона», «5 сезонов». */
 function pluralSeasons(n: number): string {
@@ -53,6 +58,10 @@ export class MediaCardComponent {
   private readonly router = inject(Router);
   readonly library = inject(LibraryService);
   private readonly fly = inject(PosterFlyService);
+  private readonly api = inject(ApiService);
+  private readonly settings = inject(SettingsService);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly destroyRef = inject(DestroyRef);
 
   /**
    * Этот постер сейчас «летит» в страницу деталей — получает
@@ -122,6 +131,63 @@ export class MediaCardComponent {
     void this.router.navigate(['/details'], { queryParams: { u: this.item().url } });
   }
 
+  // — Тизер при наведении —
+  /** Найденный embed тизера (кэш деталей ApiService, 60 с) — null = нет. */
+  private teaserEmbed: string | null = null;
+  /** Тизер сейчас играет поверх постера (указатель всё ещё на карточке). */
+  readonly teaserOn = signal(false);
+  /** Безопасный src iframe: молчаливое автовоспроизведение. */
+  readonly teaserSrc = computed(() =>
+    this.teaserOn() && this.teaserEmbed
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(mutedAutoplay(this.teaserEmbed))
+      : null,
+  );
+  private teaserTimer: ReturnType<typeof setTimeout> | undefined;
+  private teaserToken = 0;
+
+  /**
+   * Наведение на постер: через паузу (750 мс) тянем детали — вкладку
+   * «Трейлер» со страницы источника — и вешаем молчаливый iframe поверх
+   * постера. Уход с карточки гасит тизер, не докрутившийся запрос —
+   * отбрасывается по токену.
+   */
+  onPosterEnter(): void {
+    if (!this.settings.get().teasers) return;
+    if (this.teaserEmbed) {
+      this.teaserOn.set(true);
+      return;
+    }
+    if (this.teaserTimer) return;
+    const token = ++this.teaserToken;
+    this.teaserTimer = setTimeout(() => {
+      this.teaserTimer = undefined;
+      void this.loadTeaser(token);
+    }, 750);
+  }
+
+  onPosterLeave(): void {
+    this.teaserToken++; // поздние ответы не должны оживить тизер после ухода
+    if (this.teaserTimer) {
+      clearTimeout(this.teaserTimer);
+      this.teaserTimer = undefined;
+    }
+    this.teaserOn.set(false);
+  }
+
+  private async loadTeaser(token: number): Promise<void> {
+    if (!this.api.isElectron) return; // вне Electron детали недоступны
+    try {
+      const d = await this.api.loadDetails(this.item().url);
+      if (token !== this.teaserToken) return;
+      const embed = teaserUrlFromPlayers(d.players);
+      if (!embed) return; // у материала нет трейлера — постер остаётся постером
+      this.teaserEmbed = embed;
+      this.teaserOn.set(true);
+    } catch {
+      // источник не ответил — карточка просто останется без тизера
+    }
+  }
+
   onPosterError(): void {
     this.posterBroken.set(true);
   }
@@ -144,6 +210,14 @@ export class MediaCardComponent {
   markWatched(event: Event): void {
     event.stopPropagation();
     this.library.markWatched(this.item().url);
+  }
+
+  constructor() {
+    // таймер тизера не должен пережить карточку
+    this.destroyRef.onDestroy(() => {
+      this.teaserToken++;
+      if (this.teaserTimer) clearTimeout(this.teaserTimer);
+    });
   }
 
   resetProgress(event: Event): void {

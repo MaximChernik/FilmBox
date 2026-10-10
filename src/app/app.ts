@@ -2,6 +2,7 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from './core/api.service';
+import { FollowCheckService } from './core/follow-check.service';
 import { SettingsService } from './core/settings.service';
 import { beginScrollReset, isScrollResetActive } from './core/scroll-reset';
 import type { Category, MediaSummary } from './core/models';
@@ -366,6 +367,7 @@ export class App {
   private readonly router = inject(Router);
   readonly api = inject(ApiService);
   readonly settings = inject(SettingsService);
+  private readonly followCheck = inject(FollowCheckService);
 
   readonly categories = signal<Category[]>([
     { id: 'home', title: 'Главная' },
@@ -444,6 +446,8 @@ export class App {
     installSmoothWheel();
     installDiagLogs();
     installStyledSelects();
+    // слежение за новыми сериями — только в основном окне (не в PiP)
+    if (!pipWindow) this.followCheck.start();
     window.addEventListener('scroll', () => this.showToTop.set(window.scrollY > 600), {
       passive: true,
     });

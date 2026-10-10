@@ -11,6 +11,8 @@ export interface AppSettings {
   homeTab: string;
   autoNext: boolean;
   historyEnabled: boolean;
+  /** Тизер-трейлер при наведении на постер (молча, по таймеру). */
+  teasers: boolean;
   /** Ambient-подсветка: размытая копия кадра «подсвечивает» темноту вокруг сцены. */
   ambient: boolean;
   volume: number;
@@ -30,6 +32,7 @@ const DEFAULTS: AppSettings = {
   homeTab: 'home',
   autoNext: true,
   historyEnabled: true,
+  teasers: true,
   ambient: true,
   volume: 1,
   muted: false,

@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { sameMedia } from './media-key';
 import { storageGet, storageSet } from './persistent-storage';
 import type { MediaSummary } from './models';
 
@@ -26,8 +27,23 @@ const LATER_KEY = 'filmbox:later';
 const PROGRESS_KEY = 'filmbox:progress';
 const RATING_KEY = 'filmbox:ratings';
 const STATUS_KEY = 'filmbox:statuses';
+const FOLLOWS_KEY = 'filmbox:follows';
 const HISTORY_LIMIT = 60;
 const PROGRESS_LIMIT = 120;
+
+/**
+ * Отслеживаемый сериал: помним последнюю известную серию/сезон, чтобы
+ * периодическая проверка замечала только новые выходы (и не дублировала
+ * уведомление о том, что уже показано).
+ */
+export interface FollowEntry {
+  item: MediaSummary;
+  /** последняя известная серия на момент последней проверки */
+  lastEpisode?: string;
+  /** последний известный сезон */
+  seasonsCount?: string;
+  checkedAt: number;
+}
 
 /** Статус просмотра материала. */
 export type WatchStatus = 'watching' | 'watched' | 'dropped';
@@ -67,9 +83,14 @@ export class LibraryService {
   readonly statuses = signal<Record<string, WatchStatus>>(
     readJson<Record<string, WatchStatus>>(STATUS_KEY, {}),
   );
+  /** Сериалы, за которыми слежу: новые серии → системное уведомление. */
+  readonly follows = signal<Record<string, FollowEntry>>(
+    readJson<Record<string, FollowEntry>>(FOLLOWS_KEY, {}),
+  );
 
   readonly favoriteUrls = computed(() => new Set(this.favorites().map((f) => f.url)));
   readonly laterUrls = computed(() => new Set(this.later().map((l) => l.url)));
+  readonly followUrls = computed(() => new Set(Object.keys(this.follows())));
 
   isFavorite(url: string): boolean {
     return this.favoriteUrls().has(url);
@@ -77,6 +98,36 @@ export class LibraryService {
 
   isLater(url: string): boolean {
     return this.laterUrls().has(url);
+  }
+
+  isFollow(url: string): boolean {
+    return this.followUrls().has(url);
+  }
+
+  /** Включает/выключает отслеживание новых серий (снимок серии — стартовый). */
+  toggleFollow(item: MediaSummary): void {
+    const next = { ...this.follows() };
+    if (next[item.url]) {
+      delete next[item.url];
+    } else {
+      next[item.url] = {
+        item,
+        lastEpisode: item.lastEpisode,
+        seasonsCount: item.seasonsCount,
+        checkedAt: Date.now(),
+      };
+    }
+    this.follows.set(next);
+    writeJson(FOLLOWS_KEY, next);
+  }
+
+  /** Записывает результат проверки: серия не изменилась — только тик. */
+  updateFollow(url: string, patch: Partial<FollowEntry>): void {
+    const prev = this.follows()[url];
+    if (!prev) return;
+    const next = { ...this.follows(), [url]: { ...prev, ...patch, checkedAt: Date.now() } };
+    this.follows.set(next);
+    writeJson(FOLLOWS_KEY, next);
   }
 
   toggleFavorite(item: MediaSummary): void {
@@ -123,8 +174,13 @@ export class LibraryService {
     };
   }
 
+  /**
+   * Запись просмотра. Один и тот же фильм из разных источников (проверка
+   * качества на других плеерах) — одна запись: старые url того же материала
+   * выбрасываются, в истории остаётся свежий постер.
+   */
   pushHistory(item: MediaSummary): void {
-    const filtered = this.history().filter((h) => h.item.url !== item.url);
+    const filtered = this.history().filter((h) => !sameMedia(h.item, item));
     const next: HistoryEntry[] = [{ item, watchedAt: Date.now() }, ...filtered].slice(
       0,
       HISTORY_LIMIT,
@@ -138,8 +194,12 @@ export class LibraryService {
     writeJson(HISTORY_KEY, []);
   }
 
+  /** Удаляет запись и все дубли того же материала с других источников. */
   removeHistory(url: string): void {
-    const next = this.history().filter((h) => h.item.url !== url);
+    const gone = this.history().find((h) => h.item.url === url)?.item;
+    const next = this.history().filter(
+      (h) => h.item.url !== url && (!gone || !sameMedia(h.item, gone)),
+    );
     this.history.set(next);
     writeJson(HISTORY_KEY, next);
   }
@@ -155,6 +215,7 @@ export class LibraryService {
         progress: this.progress(),
         ratings: this.ratings(),
         statuses: this.statuses(),
+        follows: this.follows(),
       },
       null,
       2,
@@ -170,6 +231,7 @@ export class LibraryService {
       progress?: Record<string, EpisodeProgress>;
       ratings?: Record<string, number>;
       statuses?: Record<string, WatchStatus>;
+      follows?: Record<string, FollowEntry>;
     };
     if (!data || typeof data !== 'object') throw new Error('Неверный формат файла');
     if (Array.isArray(data.favorites)) {
@@ -195,6 +257,10 @@ export class LibraryService {
     if (data.statuses && typeof data.statuses === 'object') {
       this.statuses.set(data.statuses);
       writeJson(STATUS_KEY, data.statuses);
+    }
+    if (data.follows && typeof data.follows === 'object') {
+      this.follows.set(data.follows);
+      writeJson(FOLLOWS_KEY, data.follows);
     }
   }
 

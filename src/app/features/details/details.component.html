@@ -136,6 +136,19 @@
             <button class="btn ghost" (click)="toggleLater()">
               {{ isLater() ? '✓ Смотреть позже' : '＋ Смотреть позже' }}
             </button>
+            @if (canFollow()) {
+              <button
+                class="btn ghost"
+                [title]="
+                  isFollow()
+                    ? 'Присылать уведомление о новых сериях — нажмите, чтобы отключить'
+                    : 'Присылать системное уведомление, когда выйдут новые серии'
+                "
+                (click)="toggleFollow()"
+              >
+                {{ isFollow() ? '🔔 Слежу' : '🔕 Следить' }}
+              </button>
+            }
             <button
               class="btn ghost"
               [disabled]="trailerPhase() === 'loading'"

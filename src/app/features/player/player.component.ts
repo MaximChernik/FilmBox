@@ -107,6 +107,13 @@ export class PlayerComponent {
   readonly controlsHidden = signal(false);
   /** «Театр»: крупная сцена, скрыты шапка и хоткеи, управление остаётся */
   readonly theater = signal(false);
+  /**
+   * «Кинотеатр» — темнота вокруг кадра: шапка/подвал/холодные подсказки
+   * приложения гаснут (класс на <html>, см. styles.scss), сцена занимает
+   * окно, транспорт выезжает по движению мыши и гаснет в покое — как в
+   * полноэкранном режиме.
+   */
+  readonly cinema = signal(false);
 
   /** Ambient-подсветка: копируем кадры видео в мини-канвас под сценой. */
   private readonly ambientCanvas =
@@ -287,7 +294,7 @@ export class PlayerComponent {
     }
   };
 
-  /** Reveal the transport; in fullscreen it hides again after ~2.6s of silence. */
+  /** Reveal the transport; in fullscreen/cinema it hides again after ~2.6s of silence. */
   pokeControls(): void {
     this.lastStageActivity = Date.now();
     if (this.hideTimer !== null) {
@@ -295,20 +302,20 @@ export class PlayerComponent {
       this.hideTimer = null;
     }
     this.controlsHidden.set(false);
-    if (!document.fullscreenElement) return;
+    if (!document.fullscreenElement && !this.cinema()) return;
     this.hideTimer = window.setTimeout(() => {
       this.hideTimer = null;
-      if (document.fullscreenElement) this.controlsHidden.set(true);
+      if (document.fullscreenElement || this.cinema()) this.controlsHidden.set(true);
     }, 2600);
   }
 
-  /** The pointer left the stage — hide immediately while fullscreen. */
+  /** The pointer left the stage — hide immediately while fullscreen/cinema. */
   leaveStage(): void {
     if (this.hideTimer !== null) {
       window.clearTimeout(this.hideTimer);
       this.hideTimer = null;
     }
-    if (document.fullscreenElement) this.controlsHidden.set(true);
+    if (document.fullscreenElement || this.cinema()) this.controlsHidden.set(true);
   }
 
   constructor() {
@@ -449,6 +456,7 @@ export class PlayerComponent {
       window.removeEventListener('mousemove', this.onPointerActivity);
       window.removeEventListener('message', this.onStageMessage);
       document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+      document.documentElement.classList.remove('cinema-mode'); // кинорежим кончился с плеером
       if (this.hideTimer !== null) window.clearTimeout(this.hideTimer);
       if (this.switchHintTimer !== null) window.clearTimeout(this.switchHintTimer);
     });
@@ -1296,6 +1304,11 @@ export class PlayerComponent {
       this.toggleTheater();
       return;
     }
+    if (key === 'c') {
+      event.preventDefault();
+      this.toggleCinema();
+      return;
+    }
     // an embedded source player handles its own keys — the app's transport
     // takes over play/pause, seek and volume, pushing them into the
     // cross-origin stage frames via main
@@ -1468,6 +1481,26 @@ export class PlayerComponent {
   /** «Театр» — компактный альтернативный режим большой сцены без перехода в fullscreen. */
   toggleTheater(): void {
     this.theater.update((v) => !v);
+  }
+
+  /**
+   * «Кинотеатр» (кнопка или хоткей C): гасим обвязку приложения, сцена
+   * занимает окно, транспорт сам выезжает/уходит по движению мыши.
+   */
+  toggleCinema(): void {
+    this.cinema.update((v) => !v);
+    this.applyCinemaClass(this.cinema());
+    if (this.cinema()) this.pokeControls();
+    else if (this.hideTimer !== null) {
+      window.clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+      this.controlsHidden.set(false);
+    }
+  }
+
+  /** Кинорежим гасит шапку/подвал приложения — класс живёт на <html>. */
+  private applyCinemaClass(on: boolean): void {
+    document.documentElement.classList.toggle('cinema-mode', on);
   }
 
   /**
