@@ -70,8 +70,7 @@ import { Component, input } from '@angular/core';
       }
       @case ('later') {
         <svg viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="8" r="5.75" />
-          <path d="M8 4.6V8l2.4 1.6" />
+          <path d="M11.8 13.6 8 10.9l-3.8 2.7V3.9c0-.5.4-.9.9-.9h5.8c.5 0 .9.4.9.9z" />
         </svg>
       }
     }
