@@ -820,6 +820,15 @@ export class CatalogComponent {
     return all.length ? this.settings.orderedSourceIds(all) : ['kinogo'];
   }
 
+  /**
+   * Источники текущего раздела: «Локальные» обслуживает только файловый
+   * источник — чужие парсеры этот раздел не получают вовсе (иначе часть
+   * из них подставляла свою ленту под чужой заголовок).
+   */
+  private sourceIdsFor(categoryId: string): string[] {
+    return categoryId === 'local' ? ['local'] : this.activeSourceIds();
+  }
+
   private async openCategory(id: string): Promise<void> {
     this.deepenSeq++; // раздел сменился — фоновое углубление пула отменяем
     this.categoryId.set(id);
@@ -868,7 +877,7 @@ export class CatalogComponent {
     page: number,
     categoryId: string,
     append: boolean,
-    ids = this.activeSourceIds(),
+    ids = this.sourceIdsFor(categoryId),
   ): Promise<void> {
     // Stream results per source: the first source to answer fills the grid
     // immediately instead of waiting for the slowest mirror (the «anime takes
@@ -1040,7 +1049,7 @@ export class CatalogComponent {
       const before = this.filteredItems().length;
       let rounds = 0;
       while (rounds < 2 && this.hasMore() && !this.error()) {
-        const ids = this.activeSourceIds().filter((id) => this.moreBySource.get(id));
+        const ids = this.sourceIdsFor(this.categoryId()).filter((id) => this.moreBySource.get(id));
         if (!ids.length) {
           this.hasMore.set(false);
           break;
@@ -1054,7 +1063,7 @@ export class CatalogComponent {
       return;
     }
 
-    const ids = this.activeSourceIds().filter((id) => this.moreBySource.get(id));
+    const ids = this.sourceIdsFor(this.categoryId()).filter((id) => this.moreBySource.get(id));
     if (!ids.length) {
       this.hasMore.set(false);
       return;

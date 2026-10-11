@@ -216,6 +216,11 @@ export class ReYoHoHoRuParser implements SourceParser {
   }
 
   async getCatalog(page: number, categoryId = 'home', filters?: CatalogFilterState): Promise<PagedResult> {
+    // Чужой раздел (например, «Локальные» файлового источника) — отвечаем
+    // пусто: discover без `type` вернул бы смешанную ленту всего сайта.
+    if (categoryId !== 'home' && categoryId !== 'new' && !DISCOVER_TYPES[categoryId]) {
+      return { items: [], page, hasMore: false };
+    }
     const cat = effectiveCategory(categoryId, filters, DISCOVER_TYPES);
     const genre = filters?.genre || '';
     const yearFrom = filters?.yearFrom || '';
