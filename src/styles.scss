@@ -497,11 +497,16 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: none;
+  /* прозрачная граница одинаковой ширины у всех вариантов —
+     ghost с border 1px не выше primary; высота кнопок едина */
+  border: 1px solid transparent;
   border-radius: 10px;
   padding: 11px 22px;
   font-size: 15px;
   font-weight: 600;
+  /* фиксированный line-height: глифы ▶/★/▷ из подменных шрифтов
+     с более крупными метриками не увеличивают высоту кнопки */
+  line-height: 1.2;
   cursor: pointer;
   transition:
     filter 0.15s ease,
